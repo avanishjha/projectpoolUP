@@ -1,23 +1,24 @@
 {
-  "name": "fitstreak",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "conqr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CONQR — accountability challenges with real-money stakes. India-first.",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "gen:authz-seed": "pnpm --filter @conqr/authz gen:sql-seed"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
-    "@babel/cli": "^7.28.6",
-    "@babel/core": "^7.29.0",
-    "@babel/plugin-transform-modules-commonjs": "^7.28.6",
-    "@babel/preset-react": "^7.28.5"
-  },
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0"
   }
 }

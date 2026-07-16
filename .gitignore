@@ -5,6 +5,13 @@ package-lock.json
 # Build output
 dist/
 dist-ssr/
+build/
+.expo/
+.expo-shared/
+*.tsbuildinfo
+
+# Test
+coverage/
 
 # Logs
 *.log
@@ -23,5 +30,12 @@ pnpm-debug.log*
 *.sln
 *.sw?
 
-# Local env
+# Local env & secrets
 *.local
+.env
+.env.*
+!.env.example
+
+# Supabase local dev
+supabase/.branches/
+supabase/.temp/
