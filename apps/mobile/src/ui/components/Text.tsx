@@ -8,7 +8,14 @@ export interface TextProps extends RNTextProps {
   color?: ThemeColorRole;
 }
 
-/** The only way text is rendered in CONQR. Variants from the type scale, colors from theme roles. */
+/**
+ * The only way text is rendered in CONQR. Variants from the type scale,
+ * colors from theme roles.
+ *
+ * RULE: if a style override changes fontSize, it MUST also set a lineHeight
+ * ≥ fontSize — otherwise the variant's smaller lineHeight wins and iOS clips
+ * glyph tops (Android/web silently forgive, so test on iPhone).
+ */
 export function Text({ variant = 'body', color = 'primary', style, ...rest }: TextProps) {
   const theme = useTheme();
   return <RNText {...rest} style={[typeScale[variant], { color: roleColor(theme, color) }, style]} />;

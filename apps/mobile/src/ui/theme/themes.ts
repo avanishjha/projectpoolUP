@@ -41,6 +41,12 @@ export interface Theme {
   ringTrack: string;
   shameBorder: string;
   shameSurface: readonly [string, string];
+  /**
+   * Depth strategy differs per scheme: dark builds depth from luminous
+   * layering (no shadow), light from elevation (opaque cards + soft ambient
+   * shadow). Apply to raised surfaces (cards, circles) — not inputs.
+   */
+  cardShadow: Glow & Pick<ViewStyle, 'elevation'>;
 
   gradients: {
     ember: readonly [string, string, string];
@@ -79,6 +85,7 @@ export const darkTheme: Theme = {
   ringTrack: 'rgba(255,255,255,0.08)',
   shameBorder: 'rgba(201,87,98,0.32)',
   shameSurface: ['rgba(201,87,98,0.13)', 'rgba(201,87,98,0.04)'],
+  cardShadow: {}, // dark depth comes from luminous layering, not shadows
 
   gradients: {
     ember: ['#E06A4C', '#D6553A', '#BC4830'],
@@ -98,7 +105,8 @@ export const darkTheme: Theme = {
 export const lightTheme: Theme = {
   scheme: 'light',
 
-  canvas: '#F6F5F2',
+  // A touch deeper than the cards so white surfaces visibly lift off it.
+  canvas: '#F1F0EC',
   raised: '#FFFFFF',
 
   textPrimary: '#1B1A20',
@@ -112,29 +120,39 @@ export const lightTheme: Theme = {
   blood: '#B04751',
   violet: '#645E96',
 
-  glassSurface: 'rgba(24,22,32,0.03)',
-  glassSurfaceStrong: 'rgba(24,22,32,0.05)',
-  glassBorder: 'rgba(24,22,32,0.10)',
-  glassBorderStrong: 'rgba(24,22,32,0.16)',
-  glassSheen: 'rgba(255,255,255,0.70)',
+  // Light "glass" is not translucency — it's elevated opaque white.
+  glassSurface: '#FFFFFF',
+  glassSurfaceStrong: '#FFFFFF',
+  glassBorder: 'rgba(24,22,32,0.08)',
+  glassBorderStrong: 'rgba(24,22,32,0.14)',
+  glassSheen: 'rgba(255,255,255,0)', // no sheen line on solid white
 
   skeleton: 'rgba(24,22,32,0.08)',
   ringTrack: 'rgba(24,22,32,0.08)',
   shameBorder: 'rgba(176,71,81,0.35)',
-  shameSurface: ['rgba(176,71,81,0.09)', 'rgba(176,71,81,0.03)'],
+  shameSurface: ['rgba(176,71,81,0.07)', 'rgba(176,71,81,0.02)'],
 
   gradients: {
     ember: ['#CB5B3B', '#B94A2F', '#A03E26'],
     gold: ['#D3B678', '#BE9C51', '#9C7E3B'],
-    glassSheen: ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.10)'],
+    // Faint cool wash so big white cards aren't dead flat.
+    glassSheen: ['rgba(240,239,246,0.9)', 'rgba(255,255,255,0)'],
     shameRing: ['#C56A73', '#B04751', '#963C45'],
   },
 
   glowEmber: {
     shadowColor: '#B94A2F',
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 5 },
+  },
+
+  cardShadow: {
+    shadowColor: '#232038',
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
 };
 

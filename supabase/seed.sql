@@ -10,14 +10,30 @@
 -- ============================================================================
 
 -- ── Auth users (trigger auto-creates profile skeletons) ─────────────────────
-insert into auth.users (id, phone) values
-  ('5eed0000-0000-4000-a000-000000000001', '919800000001'),  -- avanish
-  ('5eed0000-0000-4000-a000-000000000002', '919800000002'),  -- priya
-  ('5eed0000-0000-4000-a000-000000000003', '919800000003'),  -- rahul
-  ('5eed0000-0000-4000-a000-000000000004', '919800000004'),  -- sneha
-  ('5eed0000-0000-4000-a000-000000000005', '919800000005'),  -- arjun
-  ('5eed0000-0000-4000-a000-000000000006', '919800000006'),  -- kabir
-  ('5eed0000-0000-4000-a000-000000000007', '919800000007');  -- meera
+-- GoTrue requires the token/change columns to be EMPTY STRINGS, not NULL —
+-- a bare (id, phone) insert makes signInWithOtp 500 on these users.
+insert into auth.users
+  (instance_id, id, aud, role, phone, phone_confirmed_at, encrypted_password,
+   confirmation_token, recovery_token, email_change, email_change_token_new,
+   email_change_token_current, phone_change, phone_change_token,
+   reauthentication_token, raw_app_meta_data, raw_user_meta_data,
+   created_at, updated_at)
+select
+  '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated',
+  u.phone, now(), '',
+  '', '', '', '',
+  '', '', '',
+  '', '{"provider": "phone", "providers": ["phone"]}', '{}',
+  now(), now()
+from (values
+  ('5eed0000-0000-4000-a000-000000000001'::uuid, '919800000001'),  -- avanish
+  ('5eed0000-0000-4000-a000-000000000002'::uuid, '919800000002'),  -- priya
+  ('5eed0000-0000-4000-a000-000000000003'::uuid, '919800000003'),  -- rahul
+  ('5eed0000-0000-4000-a000-000000000004'::uuid, '919800000004'),  -- sneha
+  ('5eed0000-0000-4000-a000-000000000005'::uuid, '919800000005'),  -- arjun
+  ('5eed0000-0000-4000-a000-000000000006'::uuid, '919800000006'),  -- kabir
+  ('5eed0000-0000-4000-a000-000000000007'::uuid, '919800000007')   -- meera
+) as u(id, phone);
 
 -- Complete their onboarding (what the profile-setup screen will do).
 update public.users set username = 'avanish',  display_name = 'Avanish Jha',    onboarded_at = now() where id = '5eed0000-0000-4000-a000-000000000001';

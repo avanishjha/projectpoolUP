@@ -11,4 +11,12 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
+  {
+    // CommonJS Node config files (metro, babel, etc.) legitimately use require/module.
+    files: ['**/*.config.js', '**/metro.config.js'],
+    languageOptions: { globals: { require: 'readonly', module: 'writable', __dirname: 'readonly' } },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );

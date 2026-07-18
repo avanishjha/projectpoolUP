@@ -26,6 +26,8 @@ export { ProgressRing } from './components/ProgressRing';
 export type { ProgressRingProps } from './components/ProgressRing';
 export { MoneyText } from './components/MoneyText';
 export type { MoneyTextProps } from './components/MoneyText';
+export { Input } from './components/Input';
+export type { InputProps } from './components/Input';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
 export { ToastHost } from './components/ToastHost';

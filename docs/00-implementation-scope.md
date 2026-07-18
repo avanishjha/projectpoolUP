@@ -21,10 +21,10 @@
 
 ## 1. Authentication & Identity
 
-- [ ] **F1.1 Phone OTP auth** — +91 validation (starts 6-9), MSG91/Gupshup SMS, 6-digit OTP, 5-min expiry, 3 resends max with 30s cooldown, 3 wrong = 5-min lock, session persistence
+- [x] **F1.1 Phone OTP auth** — +91 validation (starts 6-9), 6-digit OTP flow (auto-submit, shake on error, 30s resend cooldown ×3, 3 wrong = 5-min lock), AsyncStorage session persistence, auth-guarded routing, sign-out, Input + OTP components, LAN-IP auto-derivation for on-device dev, local test-OTPs via config.toml (prod MSG91 = GoTrue send-SMS hook at launch config) — E2E verified on web incl. wrong-code path, session reload, sign-out
 - [ ] **F1.2 Google Sign-In** (one-tap) & **Apple Sign-In** (iOS requirement); no email/password
-- [ ] **F1.3 Profile setup** — first/last name (2–30 chars), unique username (3–20, lowercase alnum + underscore, suggestions on conflict), avatar (≤2MB, square crop), referral code auto-gen (8-char), age gate (18+)
-- [ ] **F1.4 Auth wiring to authz** — JWT custom claims hook (platform roles), persona resolution on session
+- [x] **F1.3 Profile setup** — first/last name (2–30, letters+spaces), unique username (live availability via profiles view, conflict suggestions incl. race-on-submit 23505 handling), optional avatar (square-crop picker → avatars bucket, non-blocking on failure), explicit 18+ confirmation, onboarded_at gate in 3-state root guard (auth → onboarding → tabs, fail-open on profile errors) — E2E verified: fresh user held at onboarding, @priya_s conflict + suggestions, submit → Home + DB row, reload skips onboarding
+- [x] **F1.4 Auth wiring to authz** — JWT custom-access-token hook injects `app_roles` claim (migration 0009, granted to supabase_auth_admin only), mobile app consumes `@conqr/authz` (Metro monorepo config), `useSubject()` builds Subject from JWT roles + profile, `useCan(capability, poolContext?)` client capability hook, role badge on Profile — E2E verified: avanish JWT = [admin,operations] → Admin badge renders; base user = [] → no badge
 - [ ] **F1.5 Account management** — phone change with re-verification, account deletion (OTP re-verify → soft delete 30d → hard delete, images purged, username released, financial obligations persist)
 
 ## 2. Pools

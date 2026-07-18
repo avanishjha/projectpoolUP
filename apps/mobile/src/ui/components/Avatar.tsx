@@ -63,6 +63,8 @@ export function Avatar({ name, uri, size = 'md', ring = 'none', style }: AvatarP
         style={{
           fontFamily: fonts.displayMedium,
           fontSize: inner * 0.36,
+          // lineHeight must cover fontSize or iOS clips glyph tops.
+          lineHeight: Math.round(inner * 0.46),
           color: 'rgba(245,245,252,0.95)',
         }}
       >

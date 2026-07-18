@@ -30,9 +30,12 @@ export function EmptyState({ emoji, title, body, action, secondaryAction, style 
           height: 88,
           borderRadius: 44,
           backgroundColor: theme.glassSurfaceStrong,
+          borderWidth: 1,
+          borderColor: theme.glassBorder,
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: space.sm,
+          ...theme.cardShadow,
         }}
       >
         <Text style={{ fontSize: 40, lineHeight: 48 }}>{emoji}</Text>

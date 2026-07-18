@@ -1,39 +1,22 @@
 /**
  * The 4-tab structure from HLD §3.2: Home · Explore · Wallet · Profile.
- * Custom glass tab bar — translucent raised surface, hairline top border,
- * ember tint on the active tab, haptic on switch.
+ * Rendered through the floating liquid-glass dock (src/app-shell/FloatingDock)
+ * — detached from the screen edge, safe above Android system nav.
  */
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
 import { Compass, House, User, Wallet } from 'lucide-react-native';
-import { haptic } from '../../src/ui/foundation/haptics';
+import { FloatingDock } from '../../src/app-shell/FloatingDock';
 import { useTheme } from '../../src/ui';
-import { fonts } from '../../src/ui/tokens';
 
 export default function TabsLayout() {
   const theme = useTheme();
 
   return (
     <Tabs
+      tabBar={(props) => <FloatingDock {...props} />}
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: theme.canvas },
-        tabBarActiveTintColor: theme.ember,
-        tabBarInactiveTintColor: theme.textMuted,
-        tabBarStyle: {
-          backgroundColor: theme.scheme === 'dark' ? 'rgba(20,20,25,0.94)' : 'rgba(255,255,255,0.94)',
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: theme.glassBorder,
-          elevation: 0,
-          height: Platform.OS === 'web' ? 64 : undefined,
-        },
-        tabBarLabelStyle: {
-          fontFamily: fonts.textMedium,
-          fontSize: 11,
-        },
-      }}
-      screenListeners={{
-        tabPress: () => haptic.select(),
       }}
     >
       <Tabs.Screen

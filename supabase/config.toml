@@ -181,7 +181,8 @@ password_requirements = ""
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 2
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-sms_sent = 30
+# High for local dev (test OTPs cost nothing); production uses cloud defaults.
+sms_sent = 1000
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
@@ -238,18 +239,23 @@ otp_expiry = 3600
 # content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
-# Allow/disallow new user signups via SMS to your project.
-enable_signup = false
-# If enabled, users need to confirm their phone number before signing in.
+# Phone OTP is CONQR's primary login (FR-AUTH-01).
+enable_signup = true
 enable_confirmations = false
-# Template for sending OTP to users
-template = "Your code is {{ .Code }}"
-# Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "5s"
+template = "CONQR code: {{ .Code }}. 5 min ke andar use karo."
+# Resend cooldown — spec: 30s between resends (FRS §1.1).
+max_frequency = "30s"
 
-# Use pre-defined map of phone number to OTP for testing.
-# [auth.sms.test_otp]
-# 4152127777 = "123456"
+# Local-dev test OTPs — these numbers NEVER reach a real gateway. Production
+# SMS goes through the GoTrue send-SMS hook → MSG91/Gupshup (launch config).
+[auth.sms.test_otp]
+919999999999 = "123456"
+919999999998 = "123456"
+919999999997 = "123456"
+919999999996 = "123456"
+919800000001 = "123456"
+919800000002 = "123456"
+
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -264,17 +270,21 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# CONQR (F1.4): injects app_roles (platform roles) into the JWT. See migration 0009.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/authz/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# LOCAL DEV: GoTrue requires an enabled provider before serving the OTP
+# endpoint, even with test_otp. Dummy credentials — test numbers bypass the
+# provider entirely; any non-test number will (correctly) fail loudly.
+# PRODUCTION: SMS goes via the send-SMS hook → MSG91/Gupshup (launch config).
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+enabled = true
+account_sid = "AC00000000000000000000000000000000"
+message_service_sid = "MG00000000000000000000000000000000"
+auth_token = "local-dev-dummy-token"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]

@@ -31,6 +31,8 @@ export function GlassCard({
   const borderRadius = radii[radius];
   const fill = tone === 'shame' ? theme.shameSurface : theme.gradients.glassSheen;
 
+  // Shadow lives on the OUTER layer (iOS clips shadows under overflow:hidden);
+  // the gradient/sheen clip to the radius on an inner layer.
   return (
     <View
       style={[
@@ -39,29 +41,33 @@ export function GlassCard({
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: tone === 'shame' ? theme.shameBorder : theme.glassBorder,
           backgroundColor: strong ? theme.glassSurfaceStrong : theme.glassSurface,
-          overflow: 'hidden',
         },
+        theme.cardShadow,
         style,
       ]}
     >
-      <LinearGradient
-        colors={fill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
-      />
-      {/* 1px top sheen — the light catching the glass edge */}
       <View
-        style={{
-          pointerEvents: 'none',
-          position: 'absolute',
-          top: 0,
-          left: borderRadius,
-          right: borderRadius,
-          height: 1,
-          backgroundColor: tone === 'shame' ? theme.shameBorder : theme.glassSheen,
-        }}
-      />
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden' }]}
+      >
+        <LinearGradient
+          colors={fill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* 1px top sheen — the light catching the glass edge (dark scheme only) */}
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: borderRadius,
+            right: borderRadius,
+            height: 1,
+            backgroundColor: tone === 'shame' ? theme.shameBorder : theme.glassSheen,
+          }}
+        />
+      </View>
       <View style={padded ? { padding: space.md } : undefined}>{children}</View>
     </View>
   );
