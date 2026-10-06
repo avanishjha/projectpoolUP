@@ -198,6 +198,10 @@ Seed logins, OTP `123456`:
 | Phone | Who | Exercises |
 |---|---|---|
 | 9800000003 | rahul | Fresh check-in CTA, full camera flow |
+
+(All seven seed numbers 919800000001-007 are registered in `supabase/config.toml` under
+`[auth.sms.test_otp]`. A number absent from that list cannot receive an OTP locally -- it is
+routed to the dummy Twilio provider and fails with `sms_send_failed`.)
 | 9800000001 | avanish | Admin surfaces, organiser controls |
 | 9800000002 | priya | Replace-today's-check-in; a pending pool she owns |
 | 9800000006 | kabir | Rejection paths (delinquent) |
