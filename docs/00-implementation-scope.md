@@ -32,27 +32,27 @@
 - [x] **F2.1 Pool creation (4-step flow)** — Vibe (name 3–40, emoji picker, 9 challenge templates w/ prefill, description ≤200) → Schedule (duration presets+custom, 14-day start picker, deadline presets, window) → Stakes (India tier presets + custom buy-in/fine w/ ≤buy-in validation, payout rule, elimination, grace) → Review (summary + visibility + fee disclosure) → real INSERT through pools RLS (invite code auto-gen), success reveal screen w/ share. Home lists created pools via PoolCard. Per-step validators gate progress. Verified E2E: wizard → DB row → success → Home card. (Joined-pool listing + Pool Detail are F2.3/F2.5.)
 - [x] **F2.2 Invite system** — 6-char auto invite code, QR code (deep link), copy-to-clipboard, native/WhatsApp share w/ `conqr://` deep link, on the pool-created reveal screen
 - [x] **F2.3 Pool join** — code entry + deep-link, live pool preview by code (`preview_pool_by_code` RPC, works for private pools), rules + commitment consent, `join_pool` RPC with full validation chain (invalid/already-started/full/already-member/delinquent — all row-locked & verified), joined pools appear on Home. Payment (mandate→buy-in→atomic member) deferred to F5; members join 'pending' per Build Bible
-- [ ] **F2.4 Home dashboard** — pool cards (name, pot, streak, days remaining, check-in state), gateway empty state (Create/Join), pull-to-refresh, skeletons
-- [ ] **F2.5 Pool detail** — sticky header (pot animated ₹ counter, days left, member count), member list, leaderboard (streak DESC → fines ASC → compliance DESC → joined ASC), rules sheet, settings (organiser)
+- [~] **F2.4 Home dashboard** — pool cards (name, pot, days remaining, status dot), gateway empty state (Create/Join), pull-to-refresh, skeletons, card→detail nav. Verified E2E. **Gap: per-card check-in state + streak not yet shown** (the CTA lives only on pool detail) — finish with F4.5/polish.
+- [x] **F2.5 Pool detail** — header (pot, status dot, days, members), rules grid, ranked leaderboard (streak DESC → fines ASC → compliance DESC → joined ASC, you highlighted, medals + fire progression), membership state chip, organiser controls (share invite + cancel while pending) — via `pool_detail`/`pool_leaderboard`/`cancel_pool` RPCs (RLS-aware), card→detail wired. Verified E2E. (Real-time pot ticker = F4.5; member kick/settings = later.)
 - [ ] **F2.6 Pool lifecycle** — activation CRON (≥2 members → active, else cancel+refund), 48h pending window w/ reminders, cancellation (pending only, full refund, mandates cancelled), auto-complete when 1 active member remains, completion flow
 - [ ] **F2.7 Free pools (₹0)** — separate flow, no Razorpay, social-only
 
 ## 3. Check-ins
 
-- [ ] **F3.1 Camera** — camera-only (no gallery), front/rear toggle, liveness prompts (1-in-3 random; 1-in-2 high stakes), accessibility mode (prompts off, spot-check flag)
-- [ ] **F3.2 Preview & submit** — caption ≤200 chars, client blur detection (Laplacian variance, warn >0.7), compression <500KB (JPEG q70)
-- [ ] **F3.3 Upload pipeline** — Supabase Storage signed upload, server watermark (timestamp + pool hash), 200×200 thumbnail edge function, check_ins row, one-per-day (replace with confirm), client-initiation timestamp for deadline, server clock = truth
+- [x] **F3.1 Camera** — camera-only via expo-camera (NO gallery access), front/rear toggle, liveness prompts (1-in-3, 1-in-2 when fine ≥₹200), permission gate explaining the anti-cheat rationale. (Accessibility prompt-off mode → F12.4.)
+- [x] **F3.2 Preview & submit** — full-screen preview, retake, caption ≤200, blur heuristic w/ warning >0.7, compression to <500KB (stepped JPEG quality, 1440px cap), live KB readout, >1MB hard reject
+- [x] **F3.3 Upload pipeline** — base64→bytes upload to private `check-ins` bucket at `{pool}/{user}/{ts}.jpg` (path IS the permission), `submit_check_in` RPC (SECURITY DEFINER, avoids the snapshot trap) validating pool-active + membership-active + window, one-per-pool-local-day with REPLACE semantics, client capture timestamp stored, server clock authoritative. (Server watermark + thumbnail edge function → deferred to F5-era Edge Functions.)
 - [ ] **F3.4 Offline queue** — local queue with client timestamp, auto-upload on reconnect, 3 retries w/ backoff, past deadline = real miss
-- [ ] **F3.5 Success moment** — streak celebration screen, auto-navigate to feed, "yesterday's top check-in" hook
+- [x] **F3.5 Success moment** — streak celebration (fire progression 🔥/🔥🔥/🔥🔥🔥, projected streak, next-milestone countdown, replace-aware copy), routes back to pool. ("Yesterday's top check-in" hook lands with the feed, F4.1.)
 
 ## 4. Feed & Social
 
-- [ ] **F4.1 Feed** — reverse-chron check-in cards (avatar, caption, watermarked image, timestamp), realtime inserts (Supabase Realtime), lazy image loading (thumbnails), skeletons/empty states
-- [ ] **F4.2 Reactions** — Fire/Flex/Crown/Skull/Respect, one per user per check-in (upsert), double-tap = Fire, long-press picker, realtime counts, push to owner
-- [ ] **F4.3 Comments** — threaded ≤3 levels, Hinglish-friendly, report/hide (3 reports = auto-hide + review)
-- [ ] **F4.4 Pool events in feed** — Wall of Shame cards (red border, 24h profile ring), streak milestone cards (7/14/21/30/50/75), shield/grace used, elimination, pool started/completed
+- [x] **F4.1 Feed** — unified reverse-chron feed via `pool_feed` RPC (check-ins + CRON events in one stream, cursor-paginated), check-in cards w/ signed-URL photos (private bucket), author + streak ring, liveness badge, "under review" flag, skeletons + empty states, pull-to-refresh. (Supabase Realtime push → F4 polish; thumbnails need the watermark Edge Function.)
+- [x] **F4.2 Reactions** — Fire/Flex/Crown/Skull/Respect via `toggle_reaction` RPC (one per user; re-tap removes, different tap switches), optimistic UI w/ rollback, +2 XP on new reaction. Spectators may react (spec §4.4). (Long-press picker/double-tap shortcut → polish.)
+- [x] **F4.3 Comments** — threaded ≤3 levels (depth trigger-enforced), members-only (`post_comment` rejects spectators), reply-to UX, hidden-comment handling, +3 XP. Sheet UI w/ keyboard handling.
+- [x] **F4.4 Pool events in feed** — Wall of Shame (missed_day / fine_issued, crimson tone + shame avatar ring), streak milestones, shield/grace used, member eliminated, pool started/completed — all Hinglish-voiced, rendering the CRON's real events. (24h profile ring on avatars → polish.)
 - [ ] **F4.5 Pot ticker** — animated ₹ counter, ticks on fine events
-- [ ] **F4.6 Reporting** — reasons (not real / reused / wrong person / other), reported_count ≥3 → is_verified=false + admin queue, false-reporter suspension (5 cleared = 30d)
+- [x] **F4.6 Reporting** — reasons (not real / reused / wrong person / other) via `report_check_in` RPC, "report what you can see" enforced, reporting-suspension respected, one report per user per item; existing trigger recounts and auto-flags at 3 (`is_verified=false` → admin queue, surfaced as "Under review" on the card). (Admin review UI → F11.4; false-reporter auto-suspension → F11.x.)
 
 ## 5. Payments (Razorpay)
 
@@ -70,13 +70,13 @@
 
 ## 6. CRON Engine
 
-- [ ] **F6.1 process-checkins** (every minute) — deadline-hour pool selection, per-member miss detection, shield → grace → streak-freeze → fine cascade, streak/longest/compliance updates, elimination threshold, pot recalculation (SUM, never increment), pool_events, notifications, end-date → payout trigger; idempotent at every step
+- [x] **F6.1 process-checkins** (every minute, pg_cron) — deadline-hour pool selection, per-member miss detection, shield → grace → streak-freeze → fine cascade, streak/longest/compliance updates, elimination threshold, pot recalculation (SUM, never increment), pool_events (dedup-indexed), XP ledger, pool completion + auto-complete on last-member-standing. **Exactly-once per member-day** via `pool_members.last_processed_date`; unique `idempotency_key` as second line of defence; `pg_advisory_xact_lock` per pool; per-pool error isolation. Payment movement deliberately decoupled — fines are written 'pending' for the F5 Razorpay worker. Proven by 27 assertions incl. crash-mid-pool isolation + heal-on-retry. (Notifications → F8; payout calc → F5.)
 - [ ] **F6.2 process-retries** (every 6h) — failed txn retries per schedule
 - [ ] **F6.3 send-reminders** (hourly) — 3h push, 1h push+WhatsApp final warning, quiet hours, caps
-- [ ] **F6.4 activate-pools** (hourly) — pending → active/cancelled
+- [x] **F6.4 activate-pools** (every 10 min, pg_cron) — pending pools past start_date: ≥2 members → active + members promoted to active + `pool_started` event; <2 → cancelled. `FOR UPDATE SKIP LOCKED` so concurrent runs can't double-activate. (Refunds on cancellation → F5.)
 - [ ] **F6.5 pre-debit-notifications** (daily) — RBI notices for tomorrow's potential debits
 - [ ] **F6.6 cleanup-images** (daily 3am IST) — 90-day retention on completed pools
-- [ ] **F6.7 CRON observability** — cron_runs table (timestamp, pools_processed, fines_issued, errors, duration), external heartbeat (Cronitor/Healthchecks), alerting (missed run >5min, errors>0, zero-processed anomaly)
+- [~] **F6.7 CRON observability** — every run writes a `cron_runs` row (status, pools/members processed, fines issued, per-pool error array, duration); `public.cron_health` view (last run, last status, 24h runs/failures/fines) for the ops dashboard; 90-day log pruning job. **Still required before real money: external heartbeat (Cronitor/Healthchecks) + alerting** — NFR-REL-02 makes silent CRON failure the top risk; internal logging can't page you when the whole job stops firing.
 
 ## 7. Wallet
 
