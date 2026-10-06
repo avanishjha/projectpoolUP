@@ -68,8 +68,8 @@ and dark + light are both first-class; check both. Floating dock, not an
 edge-anchored tab bar. Every screen ships loading / empty / error / success
 states, skeletons, haptics, transitions, accessibility. No ugly placeholders.
 
-Product voice is Hinglish and a bit savage, never cruel ("Kya hua bhai?",
-"Aaj ka kaam done").
+Product voice is English — direct, a bit savage, never cruel ("He missed. You just
+got richer."). Avanish ruled out Hinglish copy on 2026-10-06.
 
 ## Platform notes
 Expo **SDK 54** (pinned to Avanish's Expo Go) — see `apps/mobile/AGENTS.md`.
