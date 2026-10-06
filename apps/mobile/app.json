@@ -33,6 +33,18 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CONQR uses your camera for daily check-in photos. Gallery uploads are never allowed — that's what keeps every pool honest."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CONQR needs photo access only to set your profile picture."
+        }
       ]
     ]
   }
