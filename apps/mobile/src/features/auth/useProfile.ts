@@ -14,6 +14,7 @@ export interface OwnProfile {
   is_creator: boolean;
   onboarded_at: string | null;
   referral_code: string;
+  deleted_at: string | null;
 }
 
 export function useProfile() {
@@ -25,7 +26,7 @@ export function useProfile() {
     queryFn: async (): Promise<OwnProfile> => {
       const { data, error } = await supabase
         .from('users')
-        .select('id, username, display_name, avatar_url, xp, level, is_pro, is_creator, onboarded_at, referral_code')
+        .select('id, username, display_name, avatar_url, xp, level, is_pro, is_creator, onboarded_at, referral_code, deleted_at')
         .eq('id', userId!)
         .single();
       if (error) throw error;

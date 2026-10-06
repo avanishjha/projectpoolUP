@@ -25,6 +25,7 @@ import { ErrorBoundary } from '../src/app-shell/ErrorBoundary';
 import { useProfile } from '../src/features/auth/useProfile';
 import { queryClient } from '../src/lib/query';
 import { useAuthStore } from '../src/stores/authStore';
+import { toast } from '../src/stores/toastStore';
 import { useUiStore } from '../src/stores/uiStore';
 import { darkTheme, lightTheme, ThemeProvider, useTheme } from '../src/ui';
 import { OfflineBanner } from '../src/ui/components/OfflineBanner';
@@ -65,6 +66,13 @@ function ThemedApp() {
       return;
     }
     if (profilePending && !profileError) return; // hold until we know onboarded state
+    // Backstop: a soft-deleted account that logs back in is bounced straight
+    // out (UC-02 6a). The deletion flow already signs out; this covers re-login.
+    if (profile?.deleted_at) {
+      toast.info('Account deleted', 'This account was deleted. Contact support to restore it.');
+      void useAuthStore.getState().signOut();
+      return;
+    }
     const needsOnboarding = !profileError && profile != null && profile.onboarded_at === null;
     if (needsOnboarding && !inOnboarding) {
       router.replace('/profile-setup');

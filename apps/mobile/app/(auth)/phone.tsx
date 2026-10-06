@@ -49,7 +49,7 @@ export default function PhoneScreen() {
         style={{ position: 'absolute', top: -120, left: -80, width: 400, height: 400, borderRadius: 400, pointerEvents: 'none' }}
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <View

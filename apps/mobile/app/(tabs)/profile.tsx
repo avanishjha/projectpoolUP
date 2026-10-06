@@ -102,9 +102,13 @@ export default function ProfileScreen() {
           </View>
         </GlassCard>
 
+        <Link href="/settings" asChild>
+          <Button label="Settings" variant="secondary" size="md" />
+        </Link>
+
         {__DEV__ && (
           <Link href="/dev/gallery" asChild>
-            <Button label="Design Gallery (dev)" variant="secondary" size="md" />
+            <Button label="Design Gallery (dev)" variant="ghost" size="md" />
           </Link>
         )}
 

@@ -62,6 +62,9 @@ export function Button({
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: theme.glassBorderStrong,
     }),
+    // Solid ember base UNDER the gradient — if expo-linear-gradient fails to
+    // paint (some Android/Fabric setups), the button stays orange, not gray.
+    ...(variant === 'primary' && showGradient && { backgroundColor: theme.ember }),
     ...(variant === 'primary' && !showGradient && {
       backgroundColor: theme.glassSurface,
       borderWidth: StyleSheet.hairlineWidth,
