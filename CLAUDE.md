@@ -59,6 +59,23 @@ to tap, and which seed login exercises the path (`123456` is the dev OTP).
 - Clean Architecture, SOLID, feature-first folders, atomic UI, strict TS.
   No God components, no duplicated logic, no huge files.
 
+## Money rules (learned the hard way; do not relax)
+- **Every settlement goes through `apply_payment_event`**, which is service-role only. A
+  client must never be able to mark its own payment succeeded.
+- **Four layers of idempotency, all load-bearing:** unique `provider_event_id` (a replayed
+  webhook is a no-op), terminal states are terminal (a late failure cannot un-succeed a
+  settled payment), unique `idempotency_key`, and the pot recomputed rather than incremented.
+- **Participation without paying is only legal in a FREE pool.** Paid pools gate check-ins
+  on a settled buy-in, and `activate_pools` counts only settled members, so a pool never
+  starts around a pot that does not exist.
+- **A live provider cannot be configured without the RBI pre-debit gate** — enforced by
+  trigger. Enabling it delays every fine by 24h; that is the law, so the copy says
+  "charged tomorrow", never "charged tonight".
+- **Before any live provider:** revoke `simulate_payment` from `authenticated`, configure the
+  heartbeat URLs (runbook §4), and set `requires_pre_debit_notice`.
+- Anything touching money gets an assertion harness in `supabase/tests/`, run twice to prove
+  idempotency. There are 118 assertions there — keep them green.
+
 ## Design is a core feature
 Reference feel: Apple Liquid Glass × Linear/Revolut restraint × Snapchat
 playfulness × BeReal. **Subtle and professional — never neon/gradient-AI.**

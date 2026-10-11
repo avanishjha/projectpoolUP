@@ -1,6 +1,6 @@
 # CONQR Database Architecture
 
-**Status:** Implemented (F0.3 + F0.4) · **Migrations:** `0003`–`0007`
+**Status:** Implemented and extended · **Migrations:** `0001`–`0028` · **Updated:** 2026-10-12
 
 > **RLS access matrix (F0.4, migration 0007):** every table is default-deny; 36 policies open
 > exactly the documented paths, all composed from `authz.*` helpers. Two-axis model:
@@ -93,3 +93,95 @@ future variance without DDL churn.
 `authz.is_pool_member`, `authz.is_active_pool_member`, `authz.is_pool_organiser`,
 `authz.can_view_pool` — the SQL mirrors of the resolver's persona derivation. F0.4 policies
 compose these + `authz.has_capability(...)`; no policy will ever inline a role name.
+
+---
+
+## What was added after F0.4 (migrations `0009`–`0028`)
+
+The principles above held. Everything below is an application of them rather than
+an exception, with two exceptions called out explicitly.
+
+### RPC layer — why business writes are functions, not table writes
+
+**The INSERT…RETURNING snapshot trap** (found in F2.1, cost hours, now a project rule):
+a client `insert().select()` becomes `INSERT … RETURNING`, which re-checks the **SELECT**
+policy on the new row. Our visibility helpers are `STABLE SECURITY DEFINER`, so they run
+under the INSERT's snapshot and cannot see the uncommitted row — the creator fails to read
+back their own record and gets `42501`.
+
+It presented as "pools create on one phone but not another", because `can_view_pool`
+short-circuits on `moderation.queue.view` and the working phone was signed in as an admin.
+
+**Rule:** any privileged or visibility-gated write goes through a `SECURITY DEFINER` RPC
+that returns the row. The RLS INSERT policy stays as defence in depth.
+
+| Area | Functions |
+|---|---|
+| Pools | `create_pool` · `join_pool` · `preview_pool_by_code` · `pool_detail` · `pool_leaderboard` · `cancel_pool` · `pool_start_readiness` |
+| Check-ins | `submit_check_in` · `my_check_in_today` |
+| Feed | `pool_feed` · `toggle_reaction` · `post_comment` · `check_in_comments` · `report_check_in` |
+| Engine | `process_check_ins` · `process_pool_day` · `activate_pools` · `complete_pool` · `recalc_pool_pot` |
+| Money | `start_checkout` · `apply_payment_event` · `simulate_payment` · `charge_pending_fines` · `process_retries` · `issue_pre_debit_notices` · `has_settled_buy_in` · `my_pool_payment` |
+| Ops | `cron_watchdog` · `cron_heartbeat` · `format_inr` |
+
+### Tables added
+
+| Table | Migration | Role |
+|---|---|---|
+| `payment_customers` | 0018 | One per user per provider |
+| `payment_mandates` | 0018 | UPI Autopay mandates (simulated until F5.3) |
+| `payment_events` | 0018 | Webhook log; **unique `provider_event_id` is the replay defence** |
+| `payment_config` | 0018 | Signing secrets. Service role only, on both axes |
+| `pre_debit_notices` | 0022 | RBI notice per fine; `debit_after` gates the debit |
+| `cron_jobs_expected` | 0024 | Cadence, grace and heartbeat URL per job |
+| `cron_alerts` | 0024 | Open/cleared alerts, deduped by partial unique index |
+
+### Columns added
+
+`pool_members.last_processed_date` (0015) — the CRON's exactly-once guard.
+`transactions.provider` / `provider_order_id` / `provider_payment_id` /
+`provider_transfer_id` (0018) — renamed from `razorpay_*` so the schema is honest about
+supporting more than one provider.
+
+### The money state machine
+
+`apply_payment_event()` is the only thing that settles a transaction, and it is service-role
+only — a client can never mark its own payment succeeded. Four layers of idempotency:
+
+1. `payment_events.provider_event_id` UNIQUE — a replayed webhook is a no-op
+2. terminal states are terminal — a late failure cannot un-succeed a settled payment
+3. `transactions.idempotency_key` UNIQUE — a duplicate charge bounces off the constraint
+4. the pot is recomputed by `recalc_pool_pot()`, never incremented
+
+The same shape governs the CRON: `last_processed_date` for exactly-once per member-day,
+`pg_advisory_xact_lock(pool)` so concurrent runs cannot interleave, and a per-pool
+`BEGIN/EXCEPTION` so one crashing pool rolls back alone and heals on the next tick.
+
+### Triggers added
+
+| Trigger | Table | Purpose |
+|---|---|---|
+| `admit_paid_member_trigger` | `transactions` | A deposit settling on a running pool promotes that member pending → active |
+| `ensure_simulated_mandate_trigger` | `transactions` | Mints a simulated mandate on buy-in settlement; refuses to for a live provider |
+| `sync_fine_side_effects_trigger` | `transactions` | Recomputes `fines_paid` and delinquency whenever a fine changes state |
+| `enforce_live_requires_notice_trigger` | `payment_config` | A live provider **cannot** be configured with the RBI gate off |
+
+### Two deliberate deviations from the principles
+
+**1. The buy-in gate changes who counts as a member.** Since 0020, participation without
+paying is only allowed in a **free** pool. `activate_pools` counts only *settled* members,
+so a paid pool with fewer than two who have paid is cancelled rather than started around a
+pot that does not exist. Unpaid members stay `pending` and are admitted the moment they pay.
+
+**2. Delinquency is derived, not latched.** `pool_members.status = 'delinquent'` is
+recomputed from the ledger — set when a fine goes terminally failed, lifted when the debt
+clears. Before 0022 nothing set it at all, so `authz.is_delinquent()` could never fire and
+non-payment had no consequence.
+
+### Test harnesses
+
+`supabase/tests/` — 118 assertions over six suites, run against a live database:
+`cron_test` (18) · `cron_chaos` (10) · `payments_test` (30) · `charger_test` (21) ·
+`observability_test` (20) · `pre_debit_test` (19). They cover replay, crash isolation,
+heal-on-retry, forged and tampered signatures, the retry ladder, the RBI gate both ways,
+and detection of a job that has silently stopped.

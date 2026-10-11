@@ -20,6 +20,37 @@ All test data created during the sweep was deleted afterwards.
 
 ---
 
+## Status at 2026-10-12
+
+**16 of 17 resolved.** The only genuinely outstanding item is **#3** — revoking
+`simulate_payment` from `authenticated`, which is on the go-live checklist and guarded by the
+`is_live` flag until then. #5 turned out to be a product decision rather than a bug and was
+answered by the buy-in gate (migration 0020).
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Ghost organiser — creator not a member of their own pool | ✅ migration 0019 + backfill |
+| 2 | Dev logins broken for 5 of 7 seed users | ✅ `config.toml` |
+| 3 | `simulate_payment` callable by clients | ⏳ **go-live checklist** |
+| 4 | Two buttons both labelled "Pay ₹499" | ✅ |
+| 5 | Unpaid members could participate | ✅ buy-in gate, migration 0020 |
+| 6 | Leaderboard listed never-started members | ✅ |
+| 7 | Empty-leaderboard copy only true at zero | ✅ |
+| 8 | Pool cancelled silently when short of members | ✅ `pool_start_readiness` + banner |
+| 9 | Buy-in advisory rather than a gate | ✅ now enforced |
+| 10 | No next step after a payment failure | ✅ attempt count + pay-now |
+| 11 | Wizard showed duration, not real dates | ✅ |
+| 12 | The daily action sat below the fold | ✅ reordered; rules collapsed |
+| 13 | Cards only ~4% above the canvas | ✅ elevation ladder + shadows restored |
+| 14 | `textMuted` failed WCAG AA | ✅ 38% → 52% |
+| 15 | Buy-in card used the shame tone from day zero | ✅ neutral until it actually fails |
+| 16 | Seed check-ins rendered "Photo unavailable" | ✅ `pnpm seed:images` |
+| 17 | Hinglish in shipped copy | ✅ including two strings in seed data |
+
+Everything still open is tracked in `docs/03-roadmap.md`.
+
+---
+
 ## 🔴 Fixed during this pass
 
 ### 1. The organiser was a ghost in their own pool — *shipped bug, now fixed*
