@@ -274,3 +274,31 @@ select public.process_check_ins('2026-10-11');  -- a specific missed day
 select public.charge_pending_fines();           -- drain the queue
 select public.cron_watchdog();                  -- re-evaluate and clear alerts
 ```
+
+### Pre-debit notices (F5.7) — what changes when you go live
+
+Setting `is_live = true` on a provider is **refused** unless
+`requires_pre_debit_notice` is also true; the two move together by trigger.
+Once on:
+
+- a fine is **not collectable the night it is incurred** — the notice starts
+  a 24h clock and the charger refuses until it elapses
+- product copy must say *"charged tomorrow"*, not *"charged tonight"*
+- `pre_debit_lead_hours` cannot be set below 24 (check constraint)
+
+```sql
+-- Going live, both flags together:
+update public.payment_config
+   set is_live = true, requires_pre_debit_notice = true
+ where provider = 'razorpay';
+
+-- Who is waiting on a notice period right now:
+select t.id, t.amount, n.debit_after
+from public.transactions t
+join public.pre_debit_notices n on n.transaction_id = t.id
+where t.status = 'pending' and n.debit_after > now();
+```
+
+Retries reuse the original notice rather than waiting another 24h each time.
+**Confirm that reading with your payment partner** — a stricter
+interpretation would require a notice per debit *attempt*.

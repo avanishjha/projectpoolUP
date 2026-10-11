@@ -241,7 +241,10 @@ begin
   if v_res->>'error' = 'unknown_order' then raise notice 'PASS: event for an unknown order refused';
   else raise exception 'FAIL: %', v_res; end if;
 
-  update public.payment_config set is_live = true where provider = 'simulator';
+  -- Since 0027 a live provider must also require pre-debit notices, so the
+  -- two flags move together. Flipping only is_live is refused by design.
+  update public.payment_config set is_live = true, requires_pre_debit_notice = true
+   where provider = 'simulator';
   v_res := public.simulate_payment('anything', 'success');
   if v_res->>'error' = 'simulator_disabled_in_live' then raise notice 'PASS: simulator refuses to run once the provider is live';
   else raise exception 'FAIL: simulator ran in live mode: %', v_res; end if;

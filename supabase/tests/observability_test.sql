@@ -172,9 +172,12 @@ end $$;
 do $$
 declare r record; n integer;
 begin
+  -- Derived, not hardcoded: adding a monitored job should not break this.
   select count(*) into n from public.cron_health;
-  if n = 5 then raise notice 'PASS: cron_health has a row per monitored job (%)', n;
-  else raise exception 'FAIL: % rows', n; end if;
+  if n = (select count(*) from public.cron_jobs_expected where enabled)
+    then raise notice 'PASS: cron_health has a row per enabled monitored job (%)', n;
+    else raise exception 'FAIL: % health rows vs % expected jobs', n,
+      (select count(*) from public.cron_jobs_expected where enabled); end if;
 
   select * into r from public.cron_health where job_name='process-checkins';
   if r.is_overdue then raise notice 'PASS: is_overdue exposes the silence cron_runs alone cannot show';
