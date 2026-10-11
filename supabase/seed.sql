@@ -72,7 +72,7 @@ insert into public.pool_members (user_id, pool_id, status, current_streak, longe
 
 -- Buy-ins (day -6) + kabir's fines: one collected, one written off after 3 retries.
 insert into public.transactions (user_id, pool_id, amount, transaction_type, status,
-                                 idempotency_key, razorpay_payment_id, settled_at, created_at, retry_count, failure_reason) values
+                                 idempotency_key, provider_payment_id, settled_at, created_at, retry_count, failure_reason) values
   ('5eed0000-0000-4000-a000-000000000001', '900d0001-0000-4000-a000-000000000001', 499, 'deposit', 'succeeded',
    '900d0001:5eed0001:2026-07-09:deposit', 'pay_seed_dep1', now() - interval '6 days', now() - interval '6 days', 0, null),
   ('5eed0000-0000-4000-a000-000000000002', '900d0001-0000-4000-a000-000000000001', 499, 'deposit', 'succeeded',
@@ -162,7 +162,7 @@ insert into public.pool_members (user_id, pool_id, status, current_streak, longe
   ('5eed0000-0000-4000-a000-000000000007', '900d0003-0000-4000-a000-000000000003', 'active', 1, 1, 100.0),
   ('5eed0000-0000-4000-a000-000000000005', '900d0003-0000-4000-a000-000000000003', 'active', 1, 1, 100.0);
 
-insert into public.transactions (user_id, pool_id, amount, transaction_type, status, idempotency_key, razorpay_payment_id, settled_at) values
+insert into public.transactions (user_id, pool_id, amount, transaction_type, status, idempotency_key, provider_payment_id, settled_at) values
   ('5eed0000-0000-4000-a000-000000000007', '900d0003-0000-4000-a000-000000000003', 99, 'deposit', 'succeeded',
    '900d0003:5eed0007:2026-07-13:deposit', 'pay_seed_dep5', now() - interval '1 day'),
   ('5eed0000-0000-4000-a000-000000000005', '900d0003-0000-4000-a000-000000000003', 99, 'deposit', 'succeeded',

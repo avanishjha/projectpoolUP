@@ -19,6 +19,8 @@ import {
   type PoolDetail,
 } from '../../src/features/pools/usePoolDetail';
 import { useTodayCheckIn } from '../../src/features/checkins/useCheckIn';
+import { usePoolPayment } from '../../src/features/payments/useCheckout';
+import { BuyInSheet } from '../../src/features/payments/BuyInSheet';
 import { useFeed, useReportCheckIn, useToggleReaction, REPORT_REASONS } from '../../src/features/feed/useFeed';
 import { CheckInCard, CheckInCardSkeleton } from '../../src/features/feed/components/CheckInCard';
 import { EventCard } from '../../src/features/feed/components/EventCard';
@@ -131,6 +133,8 @@ export default function PoolDetailScreen() {
   const detail = usePoolDetail(id);
   const leaderboard = usePoolLeaderboard(id);
   const today = useTodayCheckIn(id);
+  const payment = usePoolPayment(id);
+  const [payOpen, setPayOpen] = useState(false);
   const feed = useFeed(id);
   const toggleReaction = useToggleReaction(id);
   const reportCheckIn = useReportCheckIn(id);
@@ -142,6 +146,11 @@ export default function PoolDetailScreen() {
 
   // The daily CTA: only for active members of a running pool.
   const canCheckIn = pool?.status === 'active' && pool.my_status === 'active';
+
+  // Buy-in is owed until a deposit actually settles.
+  const payStatus = payment.data?.status ?? 'none';
+  const needsBuyIn = !!pool?.my_status && payStatus !== 'succeeded';
+  const paymentFailed = payStatus === 'failed' || payStatus === 'retry_scheduled';
   const checkedInToday = today.data?.checked_in ?? false;
 
   const refresh = useCallback(() => {
@@ -387,6 +396,33 @@ export default function PoolDetailScreen() {
               </GlassCard>
             )}
 
+            {/* Buy-in — blocks nothing, but the pool isn't really yours until it's paid */}
+            {pool.buy_in_amount > 0 && needsBuyIn && (
+              <GlassCard tone="shame">
+                <View style={{ gap: space.sm }}>
+                  <View>
+                    <Text variant="bodyMedium">
+                      {paymentFailed ? 'Buy-in payment failed' : 'Buy-in not paid'}
+                    </Text>
+                    <Text variant="footnote" color="secondary" style={{ marginTop: 2 }}>
+                      {paymentFailed
+                        ? `${formatINR(pool.buy_in_amount)} couldn’t be collected. We retry automatically, or pay now.`
+                        : `${formatINR(pool.buy_in_amount)} goes into the pot and is paid out when the pool ends.`}
+                    </Text>
+                  </View>
+                  <Button
+                    label={`Pay ${formatINR(pool.buy_in_amount)}`}
+                    size="md"
+                    fullWidth
+                    onPress={() => {
+                      haptic.tap();
+                      setPayOpen(true);
+                    }}
+                  />
+                </View>
+              </GlassCard>
+            )}
+
             {/* Daily check-in CTA */}
             {canCheckIn && (
               <Button
@@ -431,6 +467,20 @@ export default function PoolDetailScreen() {
         visible={commentsFor !== null}
         onClose={() => setCommentsFor(null)}
       />
+
+      {pool ? (
+        <BuyInSheet
+          poolId={pool.id}
+          poolName={pool.name}
+          amount={pool.buy_in_amount}
+          visible={payOpen}
+          onClose={() => setPayOpen(false)}
+          onPaid={() => {
+            setPayOpen(false);
+            refresh();
+          }}
+        />
+      ) : null}
     </View>
   );
 }
