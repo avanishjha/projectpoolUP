@@ -42,6 +42,15 @@ import {
   formatINR,
 } from '../../src/ui';
 
+/** How long until tonight's deadline, in words. */
+function deadlineCopy(pool: PoolDetail): string {
+  const nowUtcHour = new Date().getUTCHours() + new Date().getUTCMinutes() / 60;
+  let hoursLeft = pool.check_in_deadline_utc - nowUtcHour;
+  if (hoursLeft < 0) hoursLeft += 24;
+  if (hoursLeft < 1) return `${Math.max(1, Math.round(hoursLeft * 60))} min left — then ${formatINR(pool.fine_amount)}`;
+  return `${Math.floor(hoursLeft)}h left — then ${formatINR(pool.fine_amount)}`;
+}
+
 /** "6 Oct" — people commit money against dates, not durations. */
 function startDateLabel(pool: PoolDetail): string {
   return new Date(pool.start_date).toLocaleDateString('en-IN', {
@@ -144,6 +153,7 @@ export default function PoolDetailScreen() {
   const payment = usePoolPayment(id);
   const readiness = usePoolReadiness(id);
   const [payOpen, setPayOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const feed = useFeed(id);
   const toggleReaction = useToggleReaction(id);
   const reportCheckIn = useReportCheckIn(id);
@@ -325,32 +335,99 @@ export default function PoolDetailScreen() {
               </View>
             </GlassCard>
 
-            {/* Rules */}
-            <GlassCard>
-              <Text variant="caption" color="muted" style={{ marginBottom: space.sm }}>
-                Rules
+            {/* ── WHAT YOU CAME TO DO ──────────────────────────────────
+                Action sits directly under the pot. Reference material
+                (the rules) moved to the bottom behind a disclosure: you
+                read it once, you act every day. */}
+
+            {/* Will this pool actually start? Say it before the deadline does. */}
+            {shortOfStart && (
+              <GlassCard tone={ready && ready.settled >= 1 ? 'default' : 'shame'}>
+                <View style={{ gap: space.xxs }}>
+                  <Text variant="bodyMedium">
+                    {stillNeeded === 1
+                      ? '1 more person needed to start'
+                      : `${stillNeeded} more people needed to start`}
+                  </Text>
+                  <Text variant="footnote" color="secondary">
+                    {ready?.is_free
+                      ? `${ready.members} in so far. A pool needs 2 to run — if it’s short on ${startDateLabel(pool)}, it’s cancelled automatically.`
+                      : `${ready?.settled ?? 0} of ${ready?.members ?? 0} have paid in. A pool needs 2 paid members to run — if it’s short on ${startDateLabel(pool)}, it’s cancelled and everyone is refunded.`}
+                  </Text>
+                </View>
+              </GlassCard>
+            )}
+
+            {/* Buy-in. Until it settles you are not in the pot and cannot check in. */}
+            {needsBuyIn && (
+              <GlassCard tone={paymentFailed ? 'shame' : 'default'}>
+                <View style={{ gap: space.sm }}>
+                  <View>
+                    <Text variant="bodyMedium">
+                      {paymentFailed ? 'Buy-in payment failed' : 'Pay your buy-in'}
+                    </Text>
+                    <Text variant="footnote" color="secondary" style={{ marginTop: 2 }}>
+                      {paymentFailed
+                        ? `${formatINR(pool.buy_in_amount)} couldn’t be collected${
+                            payment.data?.retry_count
+                              ? ` (attempt ${payment.data.retry_count} of 3)`
+                              : ''
+                          }. We retry automatically — or pay now to get back in.`
+                        : `${formatINR(pool.buy_in_amount)} into the pot. Until it clears you can’t check in and you don’t count toward starting the pool.`}
+                    </Text>
+                  </View>
+                  <Button
+                    label={`Pay ${formatINR(pool.buy_in_amount)}`}
+                    size="md"
+                    fullWidth
+                    onPress={() => {
+                      haptic.tap();
+                      setPayOpen(true);
+                    }}
+                  />
+                </View>
+              </GlassCard>
+            )}
+
+            {/* The daily action */}
+            {canCheckIn && needsBuyIn && (
+              <Text variant="footnote" color="secondary" style={{ textAlign: 'center' }}>
+                Check-in unlocks once your buy-in clears.
               </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: space.md }}>
-                <View style={{ width: '50%' }}>
-                  <Stat label="Buy-in" value={formatINR(pool.buy_in_amount)} />
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Stat label="Fine / miss" value={formatINR(pool.fine_amount)} />
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Stat label="Duration" value={`${pool.duration_days} days`} />
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Stat label="Payout" value={PAYOUT_LABEL[pool.payout_rule]} />
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Stat label="Grace tokens" value={String(pool.grace_tokens_per_member)} />
-                </View>
-                <View style={{ width: '50%' }}>
-                  <Stat label="Elimination" value={pool.elimination_threshold ? `${pool.elimination_threshold} misses` : 'Off'} />
-                </View>
+            )}
+            {canCheckIn && !needsBuyIn && (
+              <View style={{ gap: space.xxs }}>
+                <Button
+                  label={checkedInToday ? 'Replace today’s check-in' : 'Check In Now'}
+                  variant={checkedInToday ? 'secondary' : 'primary'}
+                  fullWidth
+                  onPress={() => {
+                    haptic.tap();
+                    router.push(`/checkin/${pool.id}`);
+                  }}
+                />
+                {checkedInToday ? (
+                  <Text variant="footnote" color="mint" style={{ textAlign: 'center' }}>
+                    ✓ Done today — you’re safe
+                  </Text>
+                ) : (
+                  <Text variant="footnote" color="secondary" style={{ textAlign: 'center' }}>
+                    {deadlineCopy(pool)}
+                  </Text>
+                )}
               </View>
-            </GlassCard>
+            )}
+
+            {/* Invite — the other thing a pending pool needs */}
+            {pool.status === 'pending' && (
+              <Button
+                label="Share invite"
+                variant={shortOfStart ? 'primary' : 'secondary'}
+                size="md"
+                fullWidth
+                onPress={share}
+              />
+            )}
 
             {/* Feed | Leaderboard */}
             <SegmentedControl
@@ -412,93 +489,82 @@ export default function PoolDetailScreen() {
               </GlassCard>
             )}
 
-            {/* Will this pool actually start? Say it before the deadline does. */}
-            {shortOfStart && (
-              <GlassCard tone={ready && ready.settled >= 1 ? 'default' : 'shame'}>
-                <View style={{ gap: space.xxs }}>
-                  <Text variant="bodyMedium">
-                    {stillNeeded === 1
-                      ? '1 more person needed to start'
-                      : `${stillNeeded} more people needed to start`}
-                  </Text>
-                  <Text variant="footnote" color="secondary">
-                    {ready?.is_free
-                      ? `${ready.members} in so far. A pool needs 2 to run — if it’s short on ${startDateLabel(pool)}, it’s cancelled automatically.`
-                      : `${ready?.settled ?? 0} of ${ready?.members ?? 0} have paid in. A pool needs 2 paid members to run — if it’s short on ${startDateLabel(pool)}, it’s cancelled and everyone is refunded.`}
-                  </Text>
-                </View>
-              </GlassCard>
-            )}
-
-            {/* Buy-in. Until it settles you are not in the pot and cannot check in. */}
-            {needsBuyIn && (
-              <GlassCard tone={paymentFailed ? 'shame' : 'default'}>
-                <View style={{ gap: space.sm }}>
-                  <View>
-                    <Text variant="bodyMedium">
-                      {paymentFailed ? 'Buy-in payment failed' : 'Pay your buy-in'}
-                    </Text>
-                    <Text variant="footnote" color="secondary" style={{ marginTop: 2 }}>
-                      {paymentFailed
-                        ? `${formatINR(pool.buy_in_amount)} couldn’t be collected${
-                            payment.data?.retry_count
-                              ? ` (attempt ${payment.data.retry_count} of 3)`
-                              : ''
-                          }. We retry automatically — or pay now to get back in.`
-                        : `${formatINR(pool.buy_in_amount)} into the pot. Until it clears you can’t check in and you don’t count toward starting the pool.`}
-                    </Text>
-                  </View>
-                  <Button
-                    label={`Pay ${formatINR(pool.buy_in_amount)}`}
-                    size="md"
-                    fullWidth
-                    onPress={() => {
-                      haptic.tap();
-                      setPayOpen(true);
-                    }}
-                  />
-                </View>
-              </GlassCard>
-            )}
-
-            {/* Daily check-in CTA — gated on the buy-in having settled */}
-            {canCheckIn && needsBuyIn && (
-              <Text variant="footnote" color="secondary" style={{ textAlign: 'center' }}>
-                Check-in unlocks once your buy-in clears.
-              </Text>
-            )}
-            {canCheckIn && !needsBuyIn && (
-              <Button
-                label={checkedInToday ? 'Replace today’s check-in' : 'Check In Now'}
-                variant={checkedInToday ? 'secondary' : 'primary'}
-                fullWidth
+            {/* ── REFERENCE ─────────────────────────────────────────────
+                Read once when you join, rarely after. Collapsed so it
+                stops pushing the daily action below the fold. */}
+            <GlassCard padded={false}>
+              <Pressable
                 onPress={() => {
                   haptic.tap();
-                  router.push(`/checkin/${pool.id}`);
+                  setRulesOpen((v) => !v);
                 }}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: rulesOpen }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: space.md,
+                }}
+              >
+                <Text variant="caption" color="muted">
+                  Rules
+                </Text>
+                <Text variant="footnote" color="secondary">
+                  {rulesOpen
+                    ? 'Hide'
+                    : `${formatINR(pool.buy_in_amount)} in · ${formatINR(pool.fine_amount)} a miss`}
+                </Text>
+              </Pressable>
+
+              {rulesOpen && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    rowGap: space.md,
+                    paddingHorizontal: space.md,
+                    paddingBottom: space.md,
+                  }}
+                >
+                  <View style={{ width: '50%' }}>
+                    <Stat label="Buy-in" value={formatINR(pool.buy_in_amount)} />
+                  </View>
+                  <View style={{ width: '50%' }}>
+                    <Stat label="Fine / miss" value={formatINR(pool.fine_amount)} />
+                  </View>
+                  <View style={{ width: '50%' }}>
+                    <Stat label="Duration" value={`${pool.duration_days} days`} />
+                  </View>
+                  <View style={{ width: '50%' }}>
+                    <Stat label="Payout" value={PAYOUT_LABEL[pool.payout_rule]} />
+                  </View>
+                  <View style={{ width: '50%' }}>
+                    <Stat label="Grace tokens" value={String(pool.grace_tokens_per_member)} />
+                  </View>
+                  <View style={{ width: '50%' }}>
+                    <Stat
+                      label="Elimination"
+                      value={pool.elimination_threshold ? `${pool.elimination_threshold} misses` : 'Off'}
+                    />
+                  </View>
+                </View>
+              )}
+            </GlassCard>
+
+            {/* Organiser-only destructive control, last and quiet */}
+            {pool.is_organiser && pool.status === 'pending' && (
+              <Button
+                label="Cancel pool"
+                variant="danger"
+                size="md"
+                loading={cancelPool.isPending}
+                onPress={confirmCancel}
+                style={{ alignSelf: 'center' }}
               />
             )}
-            {checkedInToday && (
-              <Text variant="footnote" color="mint" style={{ textAlign: 'center', marginTop: -space.xs }}>
-                ✓ You’ve checked in today
-              </Text>
-            )}
-
-            {/* Organiser controls */}
-            {(pool.is_organiser || pool.status === 'pending') && (
-              <View style={{ gap: space.xs }}>
-                <Button label="Share invite" fullWidth onPress={share} />
-                {pool.is_organiser && pool.status === 'pending' && (
-                  <Button
-                    label="Cancel pool"
-                    variant="danger"
-                    size="md"
-                    loading={cancelPool.isPending}
-                    onPress={confirmCancel}
-                    style={{ alignSelf: 'center' }}
-                  />
-                )}
-              </View>
+            {pool.status === 'active' && (
+              <Button label="Share invite" variant="ghost" size="md" onPress={share} style={{ alignSelf: 'center' }} />
             )}
           </>
         )}

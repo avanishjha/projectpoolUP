@@ -29,6 +29,10 @@ export interface PoolDetail {
   my_status: 'pending' | 'active' | 'eliminated' | 'completed' | 'delinquent' | null;
   member_count: number;
   spectator_count: number;
+  check_in_deadline_utc: number;
+  check_in_window_start: number | null;
+  timezone: string;
+  paid_members: number;
 }
 
 export interface LeaderboardRow {

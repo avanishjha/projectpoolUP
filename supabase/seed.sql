@@ -57,7 +57,7 @@ insert into public.pools (id, name, description, emoji, creator_id, challenge_ty
                           start_date, end_date, status, visibility, buy_in_amount, fine_amount,
                           elimination_threshold, total_pot)
 values ('900d0001-0000-4000-a000-000000000001', '75 Hard Boyz',
-        'No excuses. Photo daily ya ₹99 pot mein.', '🔥',
+        'No excuses. Daily photo, or ₹99 goes to the pot.', '🔥',
         '5eed0000-0000-4000-a000-000000000001', '75_hard',
         now() - interval '5 days', now() + interval '25 days', 'active', 'private',
         499, 99, 5,
@@ -187,7 +187,7 @@ insert into public.notifications (user_id, type, channel, title, body, dedup_key
   ('5eed0000-0000-4000-a000-000000000003', 'reminder_3h', 'push',
    '🚨 3 ghante bache!', 'Pot: ₹2,095. Miss mat kar.', 'reminder_3h:900d0001:5eed0003:seed', 'sent', now() - interval '4 hours'),
   ('5eed0000-0000-4000-a000-000000000006', 'fine_charged', 'whatsapp',
-   '💸 Aaj miss', '₹99 pot mein gaya. Streak reset.', 'fine:900d0001:5eed0006:seed', 'sent', now() - interval '3 days');
+   '💸 Missed yesterday', '₹99 went to the pot. Streak reset.', 'fine:900d0001:5eed0006:seed', 'sent', now() - interval '3 days');
 
 -- ── CRON observability samples ──────────────────────────────────────────────
 insert into public.cron_runs (job_name, status, started_at, finished_at, pools_processed, members_processed, fines_issued) values
