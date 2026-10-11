@@ -1,0 +1,4 @@
+# Copied from @expo-google-fonts by `pnpm fonts` (same files the app ships).
+public/fonts/
+# Render output.
+out/
