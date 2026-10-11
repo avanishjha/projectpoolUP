@@ -76,7 +76,7 @@
 - [x] **F6.4 activate-pools** (every 10 min, pg_cron) — pending pools past start_date: ≥2 members → active + members promoted to active + `pool_started` event; <2 → cancelled. `FOR UPDATE SKIP LOCKED` so concurrent runs can't double-activate. (Refunds on cancellation → F5.)
 - [ ] **F6.5 pre-debit-notifications** (daily) — RBI notices for tomorrow's potential debits
 - [ ] **F6.6 cleanup-images** (daily 3am IST) — 90-day retention on completed pools
-- [~] **F6.7 CRON observability** — every run writes a `cron_runs` row (status, pools/members processed, fines issued, per-pool error array, duration); `public.cron_health` view (last run, last status, 24h runs/failures/fines) for the ops dashboard; 90-day log pruning job. **Still required before real money: external heartbeat (Cronitor/Healthchecks) + alerting** — NFR-REL-02 makes silent CRON failure the top risk; internal logging can't page you when the whole job stops firing.
+- [x] **F6.7 CRON observability** — two layers, because an in-database watchdog cannot detect its own death. (1) `cron_watchdog()` every 5 min catches **overdue** (a job that stopped writing runs — the failure `cron_runs` alone cannot show), **failing** (3 consecutive failures), and **no_progress** (fines pending >45 min while the charger reports success). Alerts raised once, cleared automatically, retained as history. (2) `cron_heartbeat()` pings an external dead-man's switch via pg_net on every run, success and failure — the only layer that survives pg_cron or the project dying. `cron_health` view for the ops dashboard. Silent no-op until URLs are configured. **Wiring the real URLs is a production step — see `docs/02-dev-runbook.md` §4.**
 
 ## 7. Wallet
 

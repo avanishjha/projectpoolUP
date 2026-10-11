@@ -189,3 +189,88 @@ docker exec supabase_auth_CONQR printenv | findstr /i "SMS TEST_OTP"
 5. Storage buckets arrive via the migrations; verify policies in dashboard.
 6. Bootstrap admin (§3.4). Point the app's env at the cloud URL + anon key (EAS env).
 7. Repeat identically for a separate prod project when staging proves out.
+
+---
+
+## 4. CRON monitoring (F6.7)
+
+Five scheduled jobs move real money. `cron_runs` records what ran — but a job
+that **stops** writes no row at all, so silence looks identical to a quiet
+night. That is the failure this section exists to catch.
+
+### Two layers, and why both
+
+| Layer | Catches | Dies when |
+|---|---|---|
+| `cron_watchdog()` — runs in-database every 5 min | one stalled or failing job, and explains why | pg_cron itself stops |
+| **outbound heartbeat** → external dead-man's switch | pg_cron, the database, or the whole project going away | nothing — that's the point |
+
+An in-database watchdog cannot detect its own death. The external switch
+alerts on the *absence* of a ping, which is the only signal that survives.
+
+### Checking health
+
+```bash
+supabase db reset   # local only
+```
+
+```sql
+-- One row per monitored job. is_overdue is the column that matters.
+select job_name, last_status, is_overdue, minutes_since, open_alerts
+from public.cron_health order by is_critical desc, job_name;
+
+-- What is currently wrong, and since when
+select job_name, kind, detail, raised_at
+from public.cron_alerts where cleared_at is null order by raised_at;
+```
+
+`cron_health` is readable by anyone with `ops.cron.monitor`. Alerts are
+raised once and cleared automatically when the condition resolves, so a job
+down for an hour produces one alert, not twelve.
+
+### Three things the watchdog looks for
+
+- **overdue** — no run inside `every_minutes + grace_minutes`. The job died.
+- **failing** — the last three runs all failed. It is running but broken.
+- **no_progress** — the subtle one. Fines pending more than 45 minutes while
+  `charge-fines` reports success. A green run is not the same as a working
+  run.
+
+### Wiring the external switch (REQUIRED before real money)
+
+Heartbeats are a **silent no-op until a URL is configured**, which is correct
+for local dev and CI. In production they are not optional.
+
+1. Create one check per job at [healthchecks.io](https://healthchecks.io) (or
+   Cronitor). Set each check's period and grace to match
+   `cron_jobs_expected`.
+2. Store the ping URLs — service role only:
+
+```sql
+update public.cron_jobs_expected set heartbeat_url = 'https://hc-ping.com/<uuid>'
+ where job_name = 'process-checkins';
+-- repeat for charge-fines, activate-pools, process-retries, watchdog
+```
+
+3. Confirm they are live:
+
+```sql
+select job_name, heartbeat_configured from public.cron_health;
+```
+
+Each job pings its base URL on success and `…/fail` on failure, so the
+external service learns about a *broken* job as well as a silent one.
+
+**Do not skip the `watchdog` check.** It is the one whose silence means the
+scheduler is gone — the other four could all be configured and still tell you
+nothing if pg_cron stopped.
+
+### Replaying after an outage
+
+Everything is idempotent, so recovery is just running the jobs again:
+
+```sql
+select public.process_check_ins('2026-10-11');  -- a specific missed day
+select public.charge_pending_fines();           -- drain the queue
+select public.cron_watchdog();                  -- re-evaluate and clear alerts
+```
