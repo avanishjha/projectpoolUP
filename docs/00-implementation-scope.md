@@ -56,7 +56,7 @@
 
 ## 5. Payments (Razorpay)
 
-- [ ] **F5.1 Razorpay foundation** — server-side keys (Supabase secrets), customer creation on first join, webhook endpoint w/ signature verification, webhook event router (payment.captured / payment.failed / subscription.charged / subscription.halted / transfer.processed / refund.processed / payment.dispute.created), idempotent handlers
+- [~] **F5.1 Payment foundation** — provider-agnostic layer running end to end on a built-in SIMULATOR (migration 0018): `payment_customers`, `payment_mandates` (shape only, F5.3 registers them), `payment_events` webhook log with UNIQUE provider_event_id as the replay defence, `verify_payment_signature` (real HMAC-SHA256, same scheme Razorpay uses), `start_checkout`, `apply_payment_event` (the state machine — service-role only), `simulate_payment` (guarded by `is_live`). Transactions are provider-agnostic (`provider`, `provider_order_id/payment_id`). 30 assertions incl. forged/tampered signatures, webhook replay, late-failure-after-success, and the 6h/24h/72h retry ladder. **Pending: real Razorpay keys, the webhook Edge Function (thin HTTP shell over `apply_payment_event`), and revoking the `simulate_payment` grant before go-live.**
 - [ ] **F5.2 Buy-in** — create order edge function, Razorpay Checkout (UPI/Card/Netbanking), capture webhook → transaction + membership (atomic), failure rollback
 - [ ] **F5.3 UPI Autopay mandate** — Emandate/subscription registration at join (before buy-in), UPI app approval flow, subscription.authenticated → store mandate_id, card tokenisation fallback, revocation handling
 - [ ] **F5.4 Fines auto-debit** — CRON-initiated charge against mandate, Razorpay idempotency keys, transaction lifecycle (pending → succeeded/failed)
