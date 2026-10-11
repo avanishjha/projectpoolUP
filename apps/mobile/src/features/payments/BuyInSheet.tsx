@@ -146,7 +146,7 @@ export function BuyInSheet({
           <View style={{ paddingHorizontal: screenX, gap: space.xs }}>
             {!order ? (
               <Button
-                label={startCheckout.isPending ? 'Opening…' : `Pay ${formatINR(amount)}`}
+                label={startCheckout.isPending ? 'Opening…' : 'Continue to payment'}
                 fullWidth
                 loading={startCheckout.isPending}
                 onPress={open}

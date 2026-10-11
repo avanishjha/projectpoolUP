@@ -159,7 +159,7 @@ export function GalleryScreen({ onToggleTheme }: GalleryScreenProps) {
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="headline">Kabir missed yesterday</Text>
                 <Text variant="footnote" color="secondary">
-                  ₹99 added to the pot. Kya hua bhai?
+                  ₹99 added to the pot. That one is going to sting.
                 </Text>
               </View>
               <MoneyText amount={99} color="blood" />

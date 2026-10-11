@@ -62,7 +62,7 @@ export default function PhoneScreen() {
         >
           <Text variant="display">CONQR</Text>
           <Text variant="body" color="secondary" style={{ marginTop: space.xxs }}>
-            Paisa lagao, discipline dikhao.
+            Real money on the line. Every single day.
           </Text>
 
           <View style={{ marginTop: space.huge, gap: space.md }}>

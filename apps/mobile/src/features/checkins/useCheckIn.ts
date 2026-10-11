@@ -49,6 +49,9 @@ const SUBMIT_ERROR_COPY: Record<string, string> = {
   membership_pending: 'Your membership isn’t active yet.',
   membership_delinquent: 'Clear your pending fines to check in.',
   window_not_open: 'The check-in window hasn’t opened yet today.',
+  buy_in_unpaid: 'Pay your buy-in first — you’re not in the pot yet.',
+  not_started: 'This pool hasn’t started yet.',
+  pool_ended: 'This pool has finished.',
 };
 
 export function submitErrorCopy(code: string): string {

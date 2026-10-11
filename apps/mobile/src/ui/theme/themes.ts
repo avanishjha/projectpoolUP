@@ -61,12 +61,12 @@ export interface Theme {
 export const darkTheme: Theme = {
   scheme: 'dark',
 
-  canvas: '#0C0C10',
-  raised: '#141419',
+  canvas: '#0A0B0F',
+  raised: '#16181F',
 
   textPrimary: 'rgba(240,240,246,0.95)',
-  textSecondary: 'rgba(232,232,242,0.60)',
-  textMuted: 'rgba(228,228,240,0.38)',
+  textSecondary: 'rgba(232,232,242,0.68)',
+  textMuted: 'rgba(228,228,240,0.52)',
   textOnAccent: '#FFF7F4',
 
   ember: '#D95B3F',
@@ -75,17 +75,27 @@ export const darkTheme: Theme = {
   blood: '#C95762',
   violet: '#8B87AE',
 
-  glassSurface: 'rgba(255,255,255,0.045)',
-  glassSurfaceStrong: 'rgba(255,255,255,0.07)',
-  glassBorder: 'rgba(255,255,255,0.09)',
-  glassBorderStrong: 'rgba(255,255,255,0.14)',
+  glassSurface: '#12141A',
+  glassSurfaceStrong: '#16181F',
+  glassBorder: 'rgba(255,255,255,0.11)',
+  glassBorderStrong: 'rgba(255,255,255,0.20)',
   glassSheen: 'rgba(255,255,255,0.10)',
 
   skeleton: 'rgba(255,255,255,0.08)',
   ringTrack: 'rgba(255,255,255,0.08)',
   shameBorder: 'rgba(201,87,98,0.32)',
   shameSurface: ['rgba(201,87,98,0.13)', 'rgba(201,87,98,0.04)'],
-  cardShadow: {}, // dark depth comes from luminous layering, not shadows
+  // Dark depth needs BOTH: a real luminance step (canvas #0A0B0F → card
+  // #16181F) and a cast shadow. A shadow you cannot consciously see on black
+  // still separates the card from the canvas; dropping it entirely was an
+  // over-correction and left every surface on one flat plane.
+  cardShadow: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
 
   gradients: {
     ember: ['#E06A4C', '#D6553A', '#BC4830'],
@@ -110,8 +120,8 @@ export const lightTheme: Theme = {
   raised: '#FFFFFF',
 
   textPrimary: '#1B1A20',
-  textSecondary: 'rgba(27,26,32,0.62)',
-  textMuted: 'rgba(27,26,32,0.42)',
+  textSecondary: 'rgba(27,26,32,0.70)',
+  textMuted: 'rgba(27,26,32,0.56)',
   textOnAccent: '#FFF7F4',
 
   ember: '#B94A2F',

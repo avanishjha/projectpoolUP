@@ -45,7 +45,7 @@ export default function CheckInSuccessScreen() {
         {wasReplaced ? 'Check-in updated' : 'Check-in posted!'}
       </Text>
       <Text variant="body" color="secondary" style={{ textAlign: 'center', marginTop: space.xxs }}>
-        {poolName ? `${poolName} · ` : ''}Aaj ka kaam done.
+        {poolName ? `${poolName} · ` : ''}Today is done.
       </Text>
 
       <View style={{ alignSelf: 'stretch', marginTop: space.xxl }}>

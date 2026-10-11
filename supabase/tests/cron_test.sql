@@ -197,6 +197,13 @@ insert into public.pool_members (user_id, pool_id, status)
 values ('c0000000-0000-4000-a000-000000000001','c0007002-0000-4000-a000-00000000700b','pending'),
        ('c0000000-0000-4000-a000-000000000002','c0007002-0000-4000-a000-00000000700b','pending');
 
+-- Since 0020 only SETTLED members count toward starting a paid pool, so this
+-- one has to have actually been paid for to activate.
+insert into public.transactions (user_id, pool_id, amount, transaction_type, status, idempotency_key)
+select pm.user_id, pm.pool_id, 500, 'deposit', 'succeeded',
+       pm.pool_id::text || ':' || pm.user_id::text || ':deposit'
+from public.pool_members pm where pm.pool_id = 'c0007002-0000-4000-a000-00000000700b';
+
 -- Pool with 1 member → should cancel.
 insert into public.pools (id, name, emoji, creator_id, challenge_type, start_date, end_date,
   check_in_deadline_utc, buy_in_amount, fine_amount, status, invite_code, timezone)
@@ -219,6 +226,26 @@ begin
   else raise exception 'FAIL: activation status=% activeMembers=%', v_a, v_ms; end if;
   if v_c='cancelled' then raise notice 'PASS: pool with <2 members cancelled';
   else raise exception 'FAIL: cancel status=%', v_c; end if;
+end $$;
+
+\echo '=== 0020: a paid pool nobody paid for must NOT start ==='
+insert into public.pools (id, name, emoji, creator_id, challenge_type, start_date, end_date,
+  check_in_deadline_utc, buy_in_amount, fine_amount, status, invite_code, timezone)
+values ('c0007004-0000-4000-a000-00000000700d','Unpaid Pool','💸',
+  'c0000000-0000-4000-a000-000000000001','custom', now() - interval '1 hour', now() + interval '30 days',
+  18, 500, 100, 'pending', 'CRON04','Asia/Kolkata');
+insert into public.pool_members (user_id, pool_id, status)
+values ('c0000000-0000-4000-a000-000000000001','c0007004-0000-4000-a000-00000000700d','pending'),
+       ('c0000000-0000-4000-a000-000000000002','c0007004-0000-4000-a000-00000000700d','pending');
+
+select public.activate_pools() as second_activation;
+
+do $$
+declare v_s text;
+begin
+  select status into v_s from public.pools where id='c0007004-0000-4000-a000-00000000700d';
+  if v_s = 'cancelled' then raise notice 'PASS: two members but zero paid → cancelled, not started with a phantom pot';
+  else raise exception 'FAIL: unpaid pool status=%', v_s; end if;
 end $$;
 
 rollback;

@@ -19,7 +19,7 @@ import {
   type PoolDetail,
 } from '../../src/features/pools/usePoolDetail';
 import { useTodayCheckIn } from '../../src/features/checkins/useCheckIn';
-import { usePoolPayment } from '../../src/features/payments/useCheckout';
+import { usePoolPayment, usePoolReadiness } from '../../src/features/payments/useCheckout';
 import { BuyInSheet } from '../../src/features/payments/BuyInSheet';
 import { useFeed, useReportCheckIn, useToggleReaction, REPORT_REASONS } from '../../src/features/feed/useFeed';
 import { CheckInCard, CheckInCardSkeleton } from '../../src/features/feed/components/CheckInCard';
@@ -41,6 +41,14 @@ import {
   useTheme,
   formatINR,
 } from '../../src/ui';
+
+/** "6 Oct" — people commit money against dates, not durations. */
+function startDateLabel(pool: PoolDetail): string {
+  return new Date(pool.start_date).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
 
 function daysLabel(pool: PoolDetail): string {
   const d = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
@@ -134,6 +142,7 @@ export default function PoolDetailScreen() {
   const leaderboard = usePoolLeaderboard(id);
   const today = useTodayCheckIn(id);
   const payment = usePoolPayment(id);
+  const readiness = usePoolReadiness(id);
   const [payOpen, setPayOpen] = useState(false);
   const feed = useFeed(id);
   const toggleReaction = useToggleReaction(id);
@@ -147,10 +156,17 @@ export default function PoolDetailScreen() {
   // The daily CTA: only for active members of a running pool.
   const canCheckIn = pool?.status === 'active' && pool.my_status === 'active';
 
-  // Buy-in is owed until a deposit actually settles.
+  // Buy-in is owed until a deposit actually settles. Free pools owe nothing.
   const payStatus = payment.data?.status ?? 'none';
-  const needsBuyIn = !!pool?.my_status && payStatus !== 'succeeded';
+  const isFree = (pool?.buy_in_amount ?? 0) <= 0;
+  const needsBuyIn = !!pool?.my_status && !isFree && payStatus !== 'succeeded';
   const paymentFailed = payStatus === 'failed' || payStatus === 'retry_scheduled';
+
+  // A pool with fewer than 2 settled members is CANCELLED on its start date.
+  // It used to happen silently; now the screen says so.
+  const ready = readiness.data;
+  const shortOfStart = pool?.status === 'pending' && !!ready && !ready.will_start;
+  const stillNeeded = ready ? Math.max(0, ready.needed - ready.settled) : 0;
   const checkedInToday = today.data?.checked_in ?? false;
 
   const refresh = useCallback(() => {
@@ -357,7 +373,7 @@ export default function PoolDetailScreen() {
                   leaderboard.data.map((row) => <MemberRow key={row.user_id} row={row} />)
                 ) : (
                   <Text variant="footnote" color="secondary" style={{ paddingVertical: space.sm }}>
-                    No members yet. Share the invite to fill the pool.
+                    Just you so far. Share the invite — a pool needs 2 to run.
                   </Text>
                 )}
               </GlassCard>
@@ -396,18 +412,40 @@ export default function PoolDetailScreen() {
               </GlassCard>
             )}
 
-            {/* Buy-in — blocks nothing, but the pool isn't really yours until it's paid */}
-            {pool.buy_in_amount > 0 && needsBuyIn && (
-              <GlassCard tone="shame">
+            {/* Will this pool actually start? Say it before the deadline does. */}
+            {shortOfStart && (
+              <GlassCard tone={ready && ready.settled >= 1 ? 'default' : 'shame'}>
+                <View style={{ gap: space.xxs }}>
+                  <Text variant="bodyMedium">
+                    {stillNeeded === 1
+                      ? '1 more person needed to start'
+                      : `${stillNeeded} more people needed to start`}
+                  </Text>
+                  <Text variant="footnote" color="secondary">
+                    {ready?.is_free
+                      ? `${ready.members} in so far. A pool needs 2 to run — if it’s short on ${startDateLabel(pool)}, it’s cancelled automatically.`
+                      : `${ready?.settled ?? 0} of ${ready?.members ?? 0} have paid in. A pool needs 2 paid members to run — if it’s short on ${startDateLabel(pool)}, it’s cancelled and everyone is refunded.`}
+                  </Text>
+                </View>
+              </GlassCard>
+            )}
+
+            {/* Buy-in. Until it settles you are not in the pot and cannot check in. */}
+            {needsBuyIn && (
+              <GlassCard tone={paymentFailed ? 'shame' : 'default'}>
                 <View style={{ gap: space.sm }}>
                   <View>
                     <Text variant="bodyMedium">
-                      {paymentFailed ? 'Buy-in payment failed' : 'Buy-in not paid'}
+                      {paymentFailed ? 'Buy-in payment failed' : 'Pay your buy-in'}
                     </Text>
                     <Text variant="footnote" color="secondary" style={{ marginTop: 2 }}>
                       {paymentFailed
-                        ? `${formatINR(pool.buy_in_amount)} couldn’t be collected. We retry automatically, or pay now.`
-                        : `${formatINR(pool.buy_in_amount)} goes into the pot and is paid out when the pool ends.`}
+                        ? `${formatINR(pool.buy_in_amount)} couldn’t be collected${
+                            payment.data?.retry_count
+                              ? ` (attempt ${payment.data.retry_count} of 3)`
+                              : ''
+                          }. We retry automatically — or pay now to get back in.`
+                        : `${formatINR(pool.buy_in_amount)} into the pot. Until it clears you can’t check in and you don’t count toward starting the pool.`}
                     </Text>
                   </View>
                   <Button
@@ -423,8 +461,13 @@ export default function PoolDetailScreen() {
               </GlassCard>
             )}
 
-            {/* Daily check-in CTA */}
-            {canCheckIn && (
+            {/* Daily check-in CTA — gated on the buy-in having settled */}
+            {canCheckIn && needsBuyIn && (
+              <Text variant="footnote" color="secondary" style={{ textAlign: 'center' }}>
+                Check-in unlocks once your buy-in clears.
+              </Text>
+            )}
+            {canCheckIn && !needsBuyIn && (
               <Button
                 label={checkedInToday ? 'Replace today’s check-in' : 'Check In Now'}
                 variant={checkedInToday ? 'secondary' : 'primary'}

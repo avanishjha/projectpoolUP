@@ -21,7 +21,7 @@ const EVENT_COPY: Record<PoolEventType, EventCopy> = {
     emoji: '🚨',
     tone: 'shame',
     title: (n) => `${n} missed a day`,
-    body: (_n, m) => `Miss #${num(m.miss_number, 1)}. Streak reset. Kya hua bhai?`,
+    body: (_n, m) => `Miss #${num(m.miss_number, 1)}. Streak reset. That one is going to sting.`,
   },
   fine_issued: {
     emoji: '💸',
@@ -57,7 +57,7 @@ const EVENT_COPY: Record<PoolEventType, EventCopy> = {
     emoji: '🚀',
     tone: 'default',
     title: () => 'Pool is LIVE',
-    body: (_n, m) => `${num(m.members)} members in. Day 1 shuru — ab koi bahana nahi.`,
+    body: (_n, m) => `${num(m.members)} members in. Day 1 starts now. No excuses left.`,
   },
   pool_completed: {
     emoji: '🏁',

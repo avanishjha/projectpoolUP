@@ -19,7 +19,7 @@ export default function PoolCreatedScreen() {
   const { code, name } = useLocalSearchParams<{ code: string; name: string }>();
 
   const deepLink = Linking.createURL('/join-pool', { queryParams: { code: code ?? '' } });
-  const shareMessage = `Join my CONQR pool "${name}" 🔥\nInvite code: ${code}\n${deepLink}\n\nPaisa lagao, discipline dikhao.`;
+  const shareMessage = `Join my CONQR pool "${name}" 🔥\nInvite code: ${code}\n${deepLink}\n\nReal money on the line. Every single day.`;
 
   const share = async () => {
     haptic.tap();
@@ -52,7 +52,8 @@ export default function PoolCreatedScreen() {
         Pool created!
       </Text>
       <Text variant="body" color="secondary" style={{ textAlign: 'center', marginTop: space.xxs }}>
-        Get your crew in before it starts.
+        Get at least one more person in — a pool needs 2 to run, or it’s
+        cancelled on the start date.
       </Text>
 
       <View style={{ alignSelf: 'stretch', marginTop: space.xl }}>

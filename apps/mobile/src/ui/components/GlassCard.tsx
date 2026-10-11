@@ -40,6 +40,10 @@ export function GlassCard({
           borderRadius,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: tone === 'shame' ? theme.shameBorder : theme.glassBorder,
+          // A brighter top edge reads as light catching the top of a real
+          // material. Cheap, and it does most of the work of making a surface
+          // feel like an object rather than a rectangle.
+          borderTopColor: tone === 'shame' ? theme.shameBorder : theme.glassBorderStrong,
           backgroundColor: strong ? theme.glassSurfaceStrong : theme.glassSurface,
         },
         theme.cardShadow,

@@ -36,6 +36,32 @@ export interface Checkout {
   provider?: string;
 }
 
+export interface StartReadiness {
+  members: number;
+  settled: number;
+  needed: number;
+  i_have_paid: boolean;
+  is_free: boolean;
+  starts_at: string;
+  will_start: boolean;
+}
+
+/**
+ * Whether this pool will actually start. A pool with fewer than two settled
+ * members is cancelled on its start date, so the UI has to say so out loud.
+ */
+export function usePoolReadiness(poolId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['poolReadiness', poolId],
+    enabled: !!poolId && enabled,
+    queryFn: async (): Promise<StartReadiness | null> => {
+      const { data, error } = await supabase.rpc('pool_start_readiness', { p_pool_id: poolId });
+      if (error) throw error;
+      return (data as StartReadiness) ?? null;
+    },
+  });
+}
+
 /** Where this member stands on their buy-in for one pool. */
 export function usePoolPayment(poolId: string | undefined) {
   return useQuery({
@@ -82,7 +108,9 @@ export function useSimulatePayment(poolId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['poolPayment', poolId] });
+      queryClient.invalidateQueries({ queryKey: ['poolReadiness', poolId] });
       queryClient.invalidateQueries({ queryKey: ['poolDetail', poolId] });
+      queryClient.invalidateQueries({ queryKey: ['poolLeaderboard', poolId] });
       queryClient.invalidateQueries({ queryKey: ['pools'] });
     },
   });

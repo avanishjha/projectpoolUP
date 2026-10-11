@@ -62,11 +62,13 @@ export function StepReview({
             {draft.description}
           </Text>
         ) : null}
-        <Line label="Duration" value={`${draft.durationDays} days`} />
         <Line
-          label="Starts"
-          value={startDate.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+          label="Runs"
+          value={`${startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(
+            startDate.getTime() + draft.durationDays * 86_400_000,
+          ).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
         />
+        <Line label="Duration" value={`${draft.durationDays} days`} />
         <Line label="Deadline" value={deadlineLabel.replace(/^[^·]*· /, '')} />
         <Line label="Buy-in" value={formatINR(draft.buyIn)} />
         <Line label="Fine / miss" value={formatINR(draft.fine)} />
