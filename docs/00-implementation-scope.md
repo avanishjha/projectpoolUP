@@ -87,8 +87,8 @@
 
 ## 8. Notifications
 
-- [~] **F8.1 Expo push** —  + client registration,  posts queued rows to Expo Push via pg_net every 2 min, deep-link routing on tap via ,  for the client. **Needs a development build** (Expo Go dropped iOS remote push at SDK 53; web has no token) — the server pipeline is complete and tested. **Notification-centre screen still to build.**
-- [x] **F8.2 Rules engine** — one door in () applying per-category opt-outs, quiet hours in the user timezone, daily caps (4 push / 2 WhatsApp) and dedup. **Critical types bypass quiet hours and caps**: the T-1h warning lands at 22:30, inside the spec window, and money notifications cannot be opted out of. Open-rate tracking still open.
+- [~] **F8.1 Expo push** — `register_push_token` + client registration, `dispatch_notifications()` posts queued rows to Expo Push via pg_net every 2 min, deep-link routing on tap via `data.route`, `my_notifications()` for the client. **Needs a development build** (Expo Go dropped iOS remote push at SDK 53; web has no token) — the server pipeline is complete and tested. **Notification-centre screen still to build.**
+- [x] **F8.2 Rules engine** — one door in (`queue_notification`) applying per-category opt-outs, quiet hours in the user timezone, daily caps (4 push / 2 WhatsApp) and dedup. **Critical types bypass quiet hours and caps**: the T-1h warning lands at 22:30, inside the spec window, and money notifications cannot be opted out of. Open-rate tracking still open.
 - [ ] **F8.3 WhatsApp Business API** — Gupshup/Wati integration, pre-approved templates (fine alert, payout, reminder, pool live, mandate failure), Hinglish copy catalog
 - [ ] **F8.4 Full copy catalog** — all Hinglish notification strings from spec §9/§10
 
