@@ -72,7 +72,7 @@
 
 - [x] **F6.1 process-checkins** (every minute, pg_cron) — deadline-hour pool selection, per-member miss detection, shield → grace → streak-freeze → fine cascade, streak/longest/compliance updates, elimination threshold, pot recalculation (SUM, never increment), pool_events (dedup-indexed), XP ledger, pool completion + auto-complete on last-member-standing. **Exactly-once per member-day** via `pool_members.last_processed_date`; unique `idempotency_key` as second line of defence; `pg_advisory_xact_lock` per pool; per-pool error isolation. Payment movement deliberately decoupled — fines are written 'pending' for the F5 Razorpay worker. Proven by 27 assertions incl. crash-mid-pool isolation + heal-on-retry. (Notifications → F8; payout calc → F5.)
 - [x] **F6.2 process-retries** —  sweeps due retries, scheduled every 6h via pg_cron.
-- [ ] **F6.3 send-reminders** (hourly) — 3h push, 1h push+WhatsApp final warning, quiet hours, caps
+- [x] **F6.3 send-reminders** (hourly, pg_cron) — T-3h nudge and T-1h final warning to active members who have not checked in, deduped per member/pool/day, stating the time left and the amount at stake. Quiet hours and caps applied via the rules engine. WhatsApp channel waits on F8.3.
 - [x] **F6.4 activate-pools** (every 10 min, pg_cron) — pending pools past start_date: ≥2 members → active + members promoted to active + `pool_started` event; <2 → cancelled. `FOR UPDATE SKIP LOCKED` so concurrent runs can't double-activate. (Refunds on cancellation → F5.)
 - [x] **F6.5 pre-debit-notifications** — scheduled every 15 min rather than daily (scope said daily): notices are already issued inline by the verdict, so this is the net for replays and inline errors, and a daily net would leave such a fine uncollectable for a day on top of its mandatory 24h wait.
 - [ ] **F6.6 cleanup-images** (daily 3am IST) — 90-day retention on completed pools
@@ -87,8 +87,8 @@
 
 ## 8. Notifications
 
-- [ ] **F8.1 Expo push** — token registration, notification center screen, deep-link routing on tap
-- [ ] **F8.2 Rules engine** — quiet hours 10pm–7am IST, caps (4 push + 2 WhatsApp/day), per-type mute settings, dedup table, open-rate tracking
+- [~] **F8.1 Expo push** —  + client registration,  posts queued rows to Expo Push via pg_net every 2 min, deep-link routing on tap via ,  for the client. **Needs a development build** (Expo Go dropped iOS remote push at SDK 53; web has no token) — the server pipeline is complete and tested. **Notification-centre screen still to build.**
+- [x] **F8.2 Rules engine** — one door in () applying per-category opt-outs, quiet hours in the user timezone, daily caps (4 push / 2 WhatsApp) and dedup. **Critical types bypass quiet hours and caps**: the T-1h warning lands at 22:30, inside the spec window, and money notifications cannot be opted out of. Open-rate tracking still open.
 - [ ] **F8.3 WhatsApp Business API** — Gupshup/Wati integration, pre-approved templates (fine alert, payout, reminder, pool live, mandate failure), Hinglish copy catalog
 - [ ] **F8.4 Full copy catalog** — all Hinglish notification strings from spec §9/§10
 

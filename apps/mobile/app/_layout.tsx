@@ -23,6 +23,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { ErrorBoundary } from '../src/app-shell/ErrorBoundary';
 import { useProfile } from '../src/features/auth/useProfile';
+import { usePushRegistration } from '../src/features/notifications/usePushToken';
 import { queryClient } from '../src/lib/query';
 import { useAuthStore } from '../src/stores/authStore';
 import { toast } from '../src/stores/toastStore';
@@ -39,6 +40,10 @@ function ThemedApp() {
   const segments = useSegments();
   const router = useRouter();
   const { data: profile, isPending: profilePending, isError: profileError } = useProfile();
+
+  // Register for push and route notification taps. No-ops on web and in
+  // Expo Go; needs a development build (see usePushToken).
+  usePushRegistration();
 
   // Latches true once we've first resolved where to route a signed-in user.
   // After that the <Stack> stays mounted forever — a later profile refetch

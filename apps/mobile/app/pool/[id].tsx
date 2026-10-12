@@ -441,7 +441,7 @@ export default function PoolDetailScreen() {
                       </View>
                       <Button
                         label="Pay now"
-                        size="sm"
+                        size="md"
                         onPress={() => {
                           haptic.tap();
                           setPayingFine(fine);
