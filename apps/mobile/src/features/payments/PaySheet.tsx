@@ -1,71 +1,76 @@
 /**
- * Buy-in checkout (F5.1, simulated provider).
+ * One payment surface for every kind of payment (F5.1 buy-in, F5.6 fines).
  *
- * This sheet stands in for the Razorpay Checkout surface. The two outcome
- * buttons are the only thing here that is fake — everything around them
- * (opening the order, the server state machine, the pot recalculation) is
- * the real path a live payment will take.
+ * Stands in for the Razorpay Checkout sheet. The two outcome buttons are the
+ * only fake part — opening the order, the server state machine and the pot
+ * recalculation are the real path a live payment takes.
+ *
+ * `onStart` is what makes it reusable: the caller supplies whichever RPC
+ * opens the order, and everything after is identical.
  */
 import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, View } from 'react-native';
 import { X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  Button,
-  fonts,
-  formatINR,
-  haptic,
-  screenX,
-  space,
-  Text,
-  useTheme,
-} from '../../ui';
+import { Button, fonts, formatINR, haptic, screenX, space, Text, useTheme } from '../../ui';
 import { toast } from '../../stores/toastStore';
-import {
-  checkoutErrorCopy,
-  useSimulatePayment,
-  useStartCheckout,
-  type Checkout,
-} from './useCheckout';
+import { checkoutErrorCopy, useSimulatePayment, type Checkout } from './useCheckout';
 
-export function BuyInSheet({
-  poolId,
-  poolName,
-  amount,
+export function PaySheet({
   visible,
   onClose,
   onPaid,
+  poolId,
+  title,
+  subject,
+  amount,
+  note,
+  onStart,
+  isStarting,
+  failureCopy,
 }: {
-  poolId: string;
-  poolName: string;
-  amount: number;
   visible: boolean;
   onClose: () => void;
   onPaid: () => void;
+  /** Which pool's caches to refresh after settlement. */
+  poolId: string | undefined;
+  title: string;
+  subject: string;
+  amount: number;
+  note: string;
+  /** Opens the order. Resolves with the checkout, or throws. */
+  onStart: (onSuccess: (c: Checkout) => void, onError: (e: Error) => void) => void;
+  isStarting: boolean;
+  /** What to say when the simulated payment is declined. */
+  failureCopy: string;
 }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const startCheckout = useStartCheckout();
   const simulate = useSimulatePayment(poolId);
-
   const [order, setOrder] = useState<Checkout | null>(null);
+
+  const close = () => {
+    setOrder(null);
+    onClose();
+  };
 
   const open = () => {
     haptic.tap();
-    startCheckout.mutate(poolId, {
-      onSuccess: (result) => {
+    onStart(
+      (result) => {
         if (result.already_paid) {
-          toast.success('Already paid', 'Your buy-in is settled.');
+          toast.success('Already paid', 'This one is settled.');
+          setOrder(null);
           onPaid();
           return;
         }
         setOrder(result);
       },
-      onError: (err) => {
+      (err) => {
         haptic.error();
-        toast.error('Could not start', checkoutErrorCopy((err as Error).message));
+        toast.error('Could not start', checkoutErrorCopy(err.message));
       },
-    });
+    );
   };
 
   const pay = (outcome: 'success' | 'fail') => {
@@ -76,12 +81,12 @@ export function BuyInSheet({
         onSuccess: (result) => {
           if (result.outcome === 'succeeded') {
             haptic.success();
-            toast.success('Payment received', `${formatINR(amount)} added to the pot.`);
+            toast.success('Payment received', `${formatINR(amount)} settled.`);
             setOrder(null);
             onPaid();
           } else {
             haptic.error();
-            toast.error('Payment declined', 'We’ll retry automatically in 6 hours.');
+            toast.error('Payment declined', failureCopy);
             setOrder(null);
             onClose();
           }
@@ -94,10 +99,10 @@ export function BuyInSheet({
     );
   };
 
-  const busy = startCheckout.isPending || simulate.isPending;
+  const busy = isStarting || simulate.isPending;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
         <View
           style={{
@@ -117,15 +122,15 @@ export function BuyInSheet({
               paddingBottom: space.sm,
             }}
           >
-            <Text variant="headline">Pay your buy-in</Text>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+            <Text variant="headline">{title}</Text>
+            <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
               <X size={20} color={theme.textMuted} strokeWidth={2} />
             </Pressable>
           </View>
 
           <View style={{ paddingHorizontal: screenX, alignItems: 'center', paddingVertical: space.lg }}>
             <Text variant="caption" color="muted">
-              {poolName}
+              {subject}
             </Text>
             <Text
               style={{
@@ -139,16 +144,16 @@ export function BuyInSheet({
               {formatINR(amount)}
             </Text>
             <Text variant="footnote" color="secondary" style={{ textAlign: 'center', marginTop: space.xxs }}>
-              One-time. Goes straight into the pot and is paid out when the pool ends.
+              {note}
             </Text>
           </View>
 
           <View style={{ paddingHorizontal: screenX, gap: space.xs }}>
             {!order ? (
               <Button
-                label={startCheckout.isPending ? 'Opening…' : 'Continue to payment'}
+                label={isStarting ? 'Opening…' : 'Continue to payment'}
                 fullWidth
-                loading={startCheckout.isPending}
+                loading={isStarting}
                 onPress={open}
               />
             ) : (

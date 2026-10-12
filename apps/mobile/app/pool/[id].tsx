@@ -4,7 +4,7 @@
  * events (Wall of Shame, milestones). All reads honour RLS via RPCs.
  */
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Share, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -19,8 +19,16 @@ import {
   type PoolDetail,
 } from '../../src/features/pools/usePoolDetail';
 import { useTodayCheckIn } from '../../src/features/checkins/useCheckIn';
-import { usePoolPayment, usePoolReadiness } from '../../src/features/payments/useCheckout';
-import { BuyInSheet } from '../../src/features/payments/BuyInSheet';
+import {
+  fineReasonCopy,
+  useOutstandingFines,
+  usePoolPayment,
+  usePoolReadiness,
+  useStartCheckout,
+  useStartFinePayment,
+  type OutstandingFine,
+} from '../../src/features/payments/useCheckout';
+import { PaySheet } from '../../src/features/payments/PaySheet';
 import { useFeed, useReportCheckIn, useToggleReaction, REPORT_REASONS } from '../../src/features/feed/useFeed';
 import { CheckInCard, CheckInCardSkeleton } from '../../src/features/feed/components/CheckInCard';
 import { EventCard } from '../../src/features/feed/components/EventCard';
@@ -154,6 +162,10 @@ export default function PoolDetailScreen() {
   const readiness = usePoolReadiness(id);
   const [payOpen, setPayOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [payingFine, setPayingFine] = useState<OutstandingFine | null>(null);
+  const owed = useOutstandingFines(id);
+  const startCheckout = useStartCheckout();
+  const startFinePayment = useStartFinePayment();
   const feed = useFeed(id);
   const toggleReaction = useToggleReaction(id);
   const reportCheckIn = useReportCheckIn(id);
@@ -184,6 +196,7 @@ export default function PoolDetailScreen() {
     leaderboard.refetch();
     today.refetch();
     feed.refetch();
+    owed.refetch();
   }, [detail, leaderboard, today, feed]);
 
   const promptReport = (checkInId: string) => {
@@ -389,6 +402,57 @@ export default function PoolDetailScreen() {
               </GlassCard>
             )}
 
+            {/* Outstanding fines — the way out of delinquency (F5.6) */}
+            {(owed.data?.length ?? 0) > 0 && (
+              <GlassCard tone={owed.data?.some((f) => f.is_terminal) ? 'shame' : 'default'}>
+                <View style={{ gap: space.sm }}>
+                  <View>
+                    <Text variant="bodyMedium">
+                      {pool.my_status === 'delinquent'
+                        ? 'You’re locked out until this is paid'
+                        : `You owe ${formatINR(
+                            (owed.data ?? []).reduce((sum, f) => sum + f.amount, 0),
+                          )}`}
+                    </Text>
+                    <Text variant="footnote" color="secondary" style={{ marginTop: 2 }}>
+                      {pool.my_status === 'delinquent'
+                        ? 'Clearing it unblocks check-ins straight away.'
+                        : 'From days you missed.'}
+                    </Text>
+                  </View>
+
+                  {(owed.data ?? []).map((fine) => (
+                    <View
+                      key={fine.transaction_id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: space.sm,
+                        paddingTop: space.xs,
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: theme.glassBorder,
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text variant="footnote">{formatINR(fine.amount)} · {fine.incurred_on}</Text>
+                        <Text variant="caption" color="muted" style={{ marginTop: 1 }}>
+                          {fineReasonCopy(fine)}
+                        </Text>
+                      </View>
+                      <Button
+                        label="Pay now"
+                        size="sm"
+                        onPress={() => {
+                          haptic.tap();
+                          setPayingFine(fine);
+                        }}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </GlassCard>
+            )}
+
             {/* The daily action */}
             {canCheckIn && needsBuyIn && (
               <Text variant="footnote" color="secondary" style={{ textAlign: 'center' }}>
@@ -577,15 +641,48 @@ export default function PoolDetailScreen() {
         onClose={() => setCommentsFor(null)}
       />
 
+      {/* Buy-in */}
       {pool ? (
-        <BuyInSheet
+        <PaySheet
           poolId={pool.id}
-          poolName={pool.name}
+          title="Pay your buy-in"
+          subject={pool.name}
           amount={pool.buy_in_amount}
+          note="One-time. Goes straight into the pot and is paid out when the pool ends."
+          failureCopy="We’ll retry automatically in 6 hours."
+          isStarting={startCheckout.isPending}
+          onStart={(ok, fail) =>
+            startCheckout.mutate(pool.id, { onSuccess: ok, onError: (e) => fail(e as Error) })
+          }
           visible={payOpen}
           onClose={() => setPayOpen(false)}
           onPaid={() => {
             setPayOpen(false);
+            refresh();
+          }}
+        />
+      ) : null}
+
+      {/* Settling an outstanding fine (F5.6) */}
+      {pool && payingFine ? (
+        <PaySheet
+          poolId={pool.id}
+          title="Clear this fine"
+          subject={`${payingFine.pool_name} · ${payingFine.incurred_on}`}
+          amount={payingFine.amount}
+          note="Paying this settles your account and unblocks check-ins straight away."
+          failureCopy="That didn’t go through. Try again, or use a different method."
+          isStarting={startFinePayment.isPending}
+          onStart={(ok, fail) =>
+            startFinePayment.mutate(payingFine.transaction_id, {
+              onSuccess: ok,
+              onError: (e) => fail(e as Error),
+            })
+          }
+          visible={!!payingFine}
+          onClose={() => setPayingFine(null)}
+          onPaid={() => {
+            setPayingFine(null);
             refresh();
           }}
         />

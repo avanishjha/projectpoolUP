@@ -116,6 +116,67 @@ export function useSimulatePayment(poolId: string | undefined) {
   });
 }
 
+export interface OutstandingFine {
+  transaction_id: string;
+  pool_id: string;
+  pool_name: string;
+  amount: number;
+  status: PaymentStatus;
+  failure_reason: string | null;
+  retry_count: number;
+  next_retry_at: string | null;
+  incurred_on: string;
+  is_terminal: boolean;
+}
+
+/** What this member still owes — the thing that keeps them delinquent. */
+export function useOutstandingFines(poolId?: string) {
+  return useQuery({
+    queryKey: ['outstandingFines', poolId ?? 'all'],
+    queryFn: async (): Promise<OutstandingFine[]> => {
+      const { data, error } = await supabase.rpc('my_outstanding_fines', {
+        p_pool_id: poolId ?? null,
+      });
+      if (error) throw error;
+      return (data as OutstandingFine[]) ?? [];
+    },
+  });
+}
+
+/**
+ * Opens a checkout for a fine the user owes. Deliberately NOT subject to the
+ * RBI pre-debit gate — that governs auto-debits pulled without the customer
+ * present, not a payment they are making themselves.
+ */
+export function useStartFinePayment() {
+  return useMutation({
+    mutationFn: async (transactionId: string): Promise<Checkout> => {
+      const { data, error } = await supabase.rpc('start_fine_payment', {
+        p_transaction_id: transactionId,
+      });
+      if (error) throw error;
+      const result = data as Checkout;
+      if (!result.ok) throw new Error(result.error ?? 'checkout_failed');
+      return result;
+    },
+  });
+}
+
+/** Why a fine is outstanding, in words the person who owes it will understand. */
+export function fineReasonCopy(fine: OutstandingFine): string {
+  if (fine.status === 'failed') {
+    return fine.failure_reason === 'no_mandate'
+      ? 'We couldn’t auto-collect this — pay it here to get back in.'
+      : fine.failure_reason === 'exceeds_mandate'
+        ? 'This was above your auto-pay limit, so it needs paying by hand.'
+        : `Collection failed after ${fine.retry_count} attempts. Pay it to clear your account.`;
+  }
+  if (fine.status === 'retry_scheduled') {
+    return 'We’ll try again automatically — or clear it now.';
+  }
+  return 'Scheduled for collection.';
+}
+
 export function checkoutErrorCopy(code: string): string {
   switch (code) {
     case 'not_a_member':
