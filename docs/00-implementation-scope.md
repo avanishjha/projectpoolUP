@@ -80,10 +80,10 @@
 
 ## 7. Wallet
 
-- [ ] **F7.1 Wallet dashboard** — active pool balances (locked buy-in, fines paid, pot, estimated payout), lifetime stats (deposited/fined/won/net P&L/pools completed/win rate)
-- [ ] **F7.2 Ledger** — full transaction list w/ status chips, detail view (Razorpay payment ID, UTR, GST)
+- [x] **F7.1 Wallet dashboard** — `my_wallet_summary()` (lifetime paid in / lost to fines / won / net / outstanding, pools finished, win rate) and `my_pool_positions()` (per running pool: what you have put in, the pot, your rank, and an **estimated payout under that pool’s own rule** — winner_takes_all, top_3_split 50/30/20, proportional by compliance — net of the 5% platform fee and 18% GST on that fee). **Explicitly a statement, not stored value:** no balance is held anywhere and there is no add-money affordance, because holding customer funds in India is a PPI requiring an RBI licence.
+- [x] **F7.2 Ledger** — `my_ledger(filter)` with All / Paid / Received / Owed, direction from the **user’s** point of view (a fine reads as money out), status chips incl. retry progress, and the provider payment id / UTR / GST so a user can reconcile against their bank statement.
 - [ ] **F7.3 Payment methods** — default UPI ID management, tokenised cards, add-method flow
-- [ ] **F7.4 Payout history** — transfers with UTR + settlement dates
+- [~] **F7.4 Payout history** — the `payouts` ledger filter exists and renders; it stays empty until F5.8 creates payout transactions.
 
 ## 8. Notifications
 
