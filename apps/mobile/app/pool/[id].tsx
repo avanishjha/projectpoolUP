@@ -4,7 +4,8 @@
  * events (Wall of Shame, milestones). All reads honour RLS via RPCs.
  */
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { FlaggedCard } from '../../src/features/moderation/FlaggedCard';
+import { Pressable, RefreshControl, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -37,6 +38,8 @@ import { toast } from '../../src/stores/toastStore';
 import {
   Avatar,
   Button,
+  ChoiceSheet,
+  ConfirmSheet,
   fonts,
   GlassCard,
   haptic,
@@ -163,6 +166,10 @@ export default function PoolDetailScreen() {
   const [payOpen, setPayOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [payingFine, setPayingFine] = useState<OutstandingFine | null>(null);
+  // Report and cancel used to go through Alert.alert, which does nothing at
+  // all on web — both buttons were dead in the browser preview.
+  const [reporting, setReporting] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const owed = useOutstandingFines(id);
   const startCheckout = useStartCheckout();
   const startFinePayment = useStartFinePayment();
@@ -200,20 +207,21 @@ export default function PoolDetailScreen() {
   }, [detail, leaderboard, today, feed]);
 
   const promptReport = (checkInId: string) => {
-    Alert.alert('Report this check-in?', 'Three reports send it for review.', [
-      ...REPORT_REASONS.map((r) => ({
-        text: r.label,
-        onPress: () =>
-          reportCheckIn.mutate(
-            { checkInId, reason: r.value },
-            {
-              onSuccess: () => toast.success('Reported', 'Thanks — our team will review it.'),
-              onError: () => toast.error('Could not report', 'Please try again.'),
-            },
-          ),
-      })),
-      { text: 'Cancel', style: 'cancel' as const },
-    ]);
+    haptic.tap();
+    setReporting(checkInId);
+  };
+
+  const sendReport = (reason: (typeof REPORT_REASONS)[number]['value']) => {
+    const checkInId = reporting;
+    setReporting(null);
+    if (!checkInId) return;
+    reportCheckIn.mutate(
+      { checkInId, reason },
+      {
+        onSuccess: () => toast.success('Reported', 'Three reports send it for review.'),
+        onError: () => toast.error('Could not report', 'Please try again.'),
+      },
+    );
   };
 
   const share = async () => {
@@ -232,23 +240,23 @@ export default function PoolDetailScreen() {
 
   const confirmCancel = () => {
     if (!pool) return;
-    Alert.alert('Cancel pool?', 'This ends the pool before it starts. This cannot be undone.', [
-      { text: 'Keep pool', style: 'cancel' },
-      {
-        text: 'Cancel pool',
-        style: 'destructive',
-        onPress: () => {
-          haptic.warning();
-          cancelPool.mutate(pool.id, {
-            onSuccess: () => {
-              toast.success('Pool cancelled', 'Everyone has been notified.');
-              refresh();
-            },
-            onError: () => toast.error('Could not cancel', 'Please try again.'),
-          });
-        },
+    haptic.warning();
+    setCancelling(true);
+  };
+
+  const doCancel = () => {
+    if (!pool) return;
+    cancelPool.mutate(pool.id, {
+      onSuccess: () => {
+        setCancelling(false);
+        toast.success('Pool cancelled', 'Everyone has been notified.');
+        refresh();
       },
-    ]);
+      onError: () => {
+        setCancelling(false);
+        toast.error('Could not cancel', 'Please try again.');
+      },
+    });
   };
 
   return (
@@ -401,6 +409,10 @@ export default function PoolDetailScreen() {
                 </View>
               </GlassCard>
             )}
+
+            {/* Under review (F11.3) — your 24h to explain, before the fines card
+                because a disputed day may yet not be a miss at all. */}
+            <FlaggedCard poolId={id} />
 
             {/* Outstanding fines — the way out of delinquency (F5.6) */}
             {(owed.data?.length ?? 0) > 0 && (
@@ -687,6 +699,27 @@ export default function PoolDetailScreen() {
           }}
         />
       ) : null}
+
+      <ChoiceSheet
+        visible={!!reporting}
+        title="Report this check-in?"
+        subtitle="Three reports hide it and send it to a moderator. False reports count against you."
+        options={REPORT_REASONS}
+        onSelect={sendReport}
+        onCancel={() => setReporting(null)}
+      />
+
+      <ConfirmSheet
+        visible={cancelling}
+        destructive
+        loading={cancelPool.isPending}
+        title="Cancel pool?"
+        body="This ends the pool before it starts. Everyone is refunded and it cannot be undone."
+        confirmLabel="Cancel pool"
+        cancelLabel="Keep pool"
+        onConfirm={doCancel}
+        onCancel={() => setCancelling(false)}
+      />
     </View>
   );
 }

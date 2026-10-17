@@ -113,8 +113,9 @@
 
 - [ ] **F11.1 Anti-cheat MVP** — camera-only, liveness prompts, blur detection, server watermark, server timestamp truth, rate limit 1/pool/day
 - [ ] **F11.2 Anti-cheat Phase 2** — EXIF validation, perceptual hash vs prior check-ins, device fingerprinting, NSFW detection (hide + warn + 3 strikes)
-- [ ] **F11.3 Moderation** — report queues (check-ins, comments), dispute window (24h submit, 48h review), admin actions (verify/reject → fine + streak reset/ban)
-- [ ] **F11.4 Admin panel** — dispute review queue (photo, liveness prompt, blur score, reports), CRON health dashboard, financial dashboard (GMV, fees + GST, outstanding fines, delinquents, reconciliation), user management
+- [x] **F11.3 Moderation** — `moderation_queue` (check-ins + comments in one list), 24h dispute window via `submit_dispute` / `my_flagged_check_ins`, 48h review window, `review_check_in` (upheld → `is_verified=false` + streak 0 + miss + one `pending` fine on the CRON's own idempotency key; cleared → restored + reporters counted wrong, 5 wrong reports = 30-day reporting suspension), `review_comment`, `suspend_user` (never yourself), every action in `moderation_actions`. Verdicts notify the accused as `moderation_verdict` — critical, so quiet hours cannot eat a message that costs ₹99. Screens: `app/admin/moderation.tsx` (capability-gated) and `FlaggedCard` on pool detail. 33 assertions in `supabase/tests/moderation_test.sql`.
+  - Deferred: a moderator can still rule on a check-in they reported themselves. In a 4-person pool blocking that would leave nobody able to moderate; the right fix is staff moderators who are not pool members, which waits for a real moderator roster.
+- [~] **F11.4 Admin panel** — dispute review queue **done** (photo, liveness prompt, blur score, reasons, the accused's own account, overdue clock) plus `moderation_stats`; CRON health is in the DB (`cron_health`, `cron_alerts`) but has no screen. Still open: financial dashboard (GMV, fees + GST, outstanding fines, delinquents, reconciliation) and user management beyond suspend.
 - [ ] **F11.5 Abuse limits** — pool creation rate limit (5/week), max active pools (3 free / unlimited Pro), duplicate device flagging, money-laundering pattern flags
 
 ## 12. Platform Quality

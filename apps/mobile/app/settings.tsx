@@ -4,6 +4,8 @@ import { router, Stack } from 'expo-router';
 import { goBack } from '../src/lib/nav';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCan } from '../src/features/auth/useCan';
+import { useModerationStats } from '../src/features/moderation/useModeration';
 import { toast } from '../src/stores/toastStore';
 import { GlassCard, haptic, screenX, space, Text, useTheme } from '../src/ui';
 
@@ -46,6 +48,10 @@ function Row({
 export default function SettingsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  // Staff-only. RLS and every moderation RPC re-check this server-side; the
+  // gate here just keeps a court out of an ordinary member's settings.
+  const canModerate = useCan('moderation.queue.view');
+  const modStats = useModerationStats();
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.canvas }}>
@@ -67,6 +73,29 @@ export default function SettingsScreen() {
           <ChevronLeft size={24} color={theme.textPrimary} strokeWidth={2} />
           <Text variant="title2">Settings</Text>
         </Pressable>
+
+        {canModerate ? (
+          <>
+            <Text variant="caption" color="muted" style={{ marginBottom: space.xs }}>
+              Staff
+            </Text>
+            <GlassCard style={{ marginBottom: space.lg }}>
+              <Row
+                label="Moderation queue"
+                sublabel={
+                  modStats.data
+                    ? modStats.data.open_check_ins + modStats.data.open_comments === 0
+                      ? 'Nothing waiting'
+                      : `${modStats.data.open_check_ins + modStats.data.open_comments} waiting${
+                          modStats.data.overdue > 0 ? ` · ${modStats.data.overdue} overdue` : ''
+                        }`
+                    : 'Reported check-ins and comments'
+                }
+                onPress={() => router.push('/admin/moderation')}
+              />
+            </GlassCard>
+          </>
+        ) : null}
 
         <Text variant="caption" color="muted" style={{ marginBottom: space.xs }}>
           Legal

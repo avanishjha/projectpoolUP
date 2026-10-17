@@ -10,6 +10,11 @@ guess. Working trackers I keep current:
 - `docs/00-implementation-scope.md` — F-numbered checklist. **Update the
   checkboxes as features complete**, and record what was deliberately deferred
   and why (don't silently mark a partial item done).
+- `docs/04-app-flow-and-test-guide.md` — every flow the app supports, how it
+  works underneath, and how to test it. **Every feature updates this file in the
+  same commit**: a row in the at-a-glance table, a walkthrough with the route
+  and the seed login, and the suite that defends it. A feature that isn't in
+  there isn't finished. Rewrite stale text; don't append to it.
 - `docs/01-build-order.md` — dependency graph + serial order.
 - `docs/02-dev-runbook.md` — daily commands, troubleshooting, Supabase ops.
 - `docs/architecture/{authorization,database,environments}.md`
@@ -74,7 +79,7 @@ to tap, and which seed login exercises the path (`123456` is the dev OTP).
 - **Before any live provider:** revoke `simulate_payment` from `authenticated`, configure the
   heartbeat URLs (runbook §4), and set `requires_pre_debit_notice`.
 - Anything touching money gets an assertion harness in `supabase/tests/`, run twice to prove
-  idempotency. There are 118 assertions there — keep them green.
+  idempotency. `pnpm test:db` runs all of them twice; there are 216 assertions — keep them green.
 
 ## Design is a core feature
 Reference feel: Apple Liquid Glass × Linear/Revolut restraint × Snapchat
@@ -92,3 +97,6 @@ got richer."). Avanish ruled out Hinglish copy on 2026-10-06.
 Expo **SDK 54** (pinned to Avanish's Expo Go) — see `apps/mobile/AGENTS.md`.
 Known preview traps (Reanimated `entering` blank on web, Metro HMR staleness
 needing `--clear`, `goBack()` over `router.back()`) are in the runbook.
+**Never use `Alert.alert`** — it is a silent no-op on react-native-web, so the
+button simply does nothing in the browser preview. Use `ConfirmSheet` (yes/no)
+or `ChoiceSheet` (pick one) from `src/ui`.

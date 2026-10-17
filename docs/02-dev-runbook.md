@@ -50,6 +50,14 @@ pnpm lint
 pnpm gen:authz-seed    # after editing packages/authz capability catalog
 ```
 
+```bash
+pnpm test:db
+```
+
+Runs every harness in `supabase/tests` twice (the second pass is the
+idempotency proof) and fails a suite that asserts nothing. One suite while you
+work on it: `node scripts/run-sql-tests.mjs moderation --once`.
+
 ### Reset the world
 
 ```powershell
@@ -77,6 +85,13 @@ Do this freely — it's the point of the seed.
 | OTP request → **429** | Server-side resend cooldown (30s per number). Wait and retry — repeated taps extend the wait. |
 
 ---
+
+### Buttons that do nothing in the browser preview
+
+`Alert.alert` is a silent no-op on react-native-web — no dialog, no error, no
+console message. Any confirm or action-sheet built on it is a dead button in the
+web preview (and looks like an OS dialog on device, which is also wrong). Use
+`ConfirmSheet` or `ChoiceSheet` from `src/ui`.
 
 ## 3. Supabase operations guide
 

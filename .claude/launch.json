@@ -4,8 +4,27 @@
     {
       "name": "conqr-mobile-web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "apps/mobile", "web", "--port", "8090"],
+      "runtimeArgs": [
+        "--dir",
+        "apps/mobile",
+        "web",
+        "--port",
+        "8090"
+      ],
       "port": 8090
+    },
+    {
+      "name": "conqr-mobile-web-clear",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "apps/mobile",
+        "web",
+        "--port",
+        "8091",
+        "--clear"
+      ],
+      "port": 8091
     }
   ]
 }

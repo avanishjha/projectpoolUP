@@ -90,7 +90,7 @@ insert into public.transactions (user_id, pool_id, amount, transaction_type, sta
 insert into public.check_ins (user_id, pool_id, image_path, caption, blur_score, client_captured_at, checkin_date, created_at) values
   ('5eed0000-0000-4000-a000-000000000001', '900d0001-0000-4000-a000-000000000001',
    '900d0001-0000-4000-a000-000000000001/5eed0000-0000-4000-a000-000000000001/day5.jpg',
-   'Day 5. Subah 6 baje. 🏋️', 0.12, now() - interval '3 hours', (now() at time zone 'Asia/Kolkata')::date, now() - interval '3 hours'),
+   'Day 5. 6am. No negotiation. 🏋️', 0.12, now() - interval '3 hours', (now() at time zone 'Asia/Kolkata')::date, now() - interval '3 hours'),
   ('5eed0000-0000-4000-a000-000000000002', '900d0001-0000-4000-a000-000000000001',
    '900d0001-0000-4000-a000-000000000001/5eed0000-0000-4000-a000-000000000002/day5.jpg',
    '5km done before sunrise 🌅', 0.08, now() - interval '5 hours', (now() at time zone 'Asia/Kolkata')::date, now() - interval '5 hours'),
@@ -99,7 +99,7 @@ insert into public.check_ins (user_id, pool_id, image_path, caption, blur_score,
    'Day 4 ✅', 0.15, now() - interval '1 day 4 hours', (now() at time zone 'Asia/Kolkata')::date - 1, now() - interval '1 day 4 hours'),
   ('5eed0000-0000-4000-a000-000000000003', '900d0001-0000-4000-a000-000000000001',
    '900d0001-0000-4000-a000-000000000001/5eed0000-0000-4000-a000-000000000003/day5.jpg',
-   'wapas aa gaya 💪', 0.22, now() - interval '1 hour', (now() at time zone 'Asia/Kolkata')::date, now() - interval '1 hour');
+   'Back on it 💪', 0.22, now() - interval '1 hour', (now() at time zone 'Asia/Kolkata')::date, now() - interval '1 hour');
 
 -- Reactions + a comment thread on priya's check-in today.
 insert into public.reactions (check_in_id, user_id, reaction_type)
@@ -115,7 +115,7 @@ where ci.user_id = '5eed0000-0000-4000-a000-000000000002'
   and ci.checkin_date = (now() at time zone 'Asia/Kolkata')::date;
 
 insert into public.comments (check_in_id, user_id, body)
-select ci.id, '5eed0000-0000-4000-a000-000000000003', 'machine ho yaar 🔥'
+select ci.id, '5eed0000-0000-4000-a000-000000000003', 'You are a machine 🔥'
 from public.check_ins ci
 where ci.user_id = '5eed0000-0000-4000-a000-000000000002'
   and ci.checkin_date = (now() at time zone 'Asia/Kolkata')::date;
@@ -185,7 +185,7 @@ update public.users u set xp = coalesce((select sum(x.amount) from public.xp_eve
 -- ── Notifications (inbox samples) ───────────────────────────────────────────
 insert into public.notifications (user_id, type, channel, title, body, dedup_key, status, sent_at) values
   ('5eed0000-0000-4000-a000-000000000003', 'reminder_3h', 'push',
-   '🚨 3 ghante bache!', 'Pot: ₹2,095. Miss mat kar.', 'reminder_3h:900d0001:5eed0003:seed', 'sent', now() - interval '4 hours'),
+   '🚨 3 hours left', 'Pot is ₹2,095. Do not be the one who misses.', 'reminder_3h:900d0001:5eed0003:seed', 'sent', now() - interval '4 hours'),
   ('5eed0000-0000-4000-a000-000000000006', 'fine_charged', 'whatsapp',
    '💸 Missed yesterday', '₹99 went to the pot. Streak reset.', 'fine:900d0001:5eed0006:seed', 'sent', now() - interval '3 days');
 
@@ -194,3 +194,50 @@ insert into public.cron_runs (job_name, status, started_at, finished_at, pools_p
   ('process-checkins', 'succeeded', now() - interval '1 day', now() - interval '1 day' + interval '2 seconds', 2, 6, 1),
   ('process-checkins', 'succeeded', now() - interval '2 hours', now() - interval '2 hours' + interval '1 second', 2, 6, 0),
   ('activate-pools',   'succeeded', now() - interval '1 hour', now() - interval '1 hour' + interval '1 second', 0, 0, 0);
+
+-- ── Moderation queue samples (F11.3) ────────────────────────────────────────
+-- Rahul's check-in today gets three reports, which is the threshold the
+-- existing trigger uses to hide a check-in and put it in front of a moderator.
+-- Note the 4-person pool forces avanish (the admin) to be one of the three
+-- reporters; see docs/00-implementation-scope.md for the conflict-of-interest
+-- item that is deliberately not enforced yet.
+insert into public.reports (reporter_id, check_in_id, reason, detail)
+select r.reporter, ci.id, r.reason, r.detail
+from public.check_ins ci
+cross join (values
+  ('5eed0000-0000-4000-a000-000000000001'::uuid, 'reused_photo'::public.report_reason,
+   'Same gym mirror, same hoodie as day 3.'),
+  ('5eed0000-0000-4000-a000-000000000002'::uuid, 'not_real_photo'::public.report_reason,
+   'This looks like a screenshot, not a camera capture.'),
+  ('5eed0000-0000-4000-a000-000000000006'::uuid, 'reused_photo'::public.report_reason, null)
+) as r(reporter, reason, detail)
+where ci.user_id = '5eed0000-0000-4000-a000-000000000003'
+  and ci.pool_id = '900d0001-0000-4000-a000-000000000001'
+  and ci.checkin_date = (now() at time zone 'Asia/Kolkata')::date;
+
+-- ...and he has already filed his side of it, so the queue shows a real dispute.
+insert into public.check_in_disputes (check_in_id, user_id, body)
+select ci.id, ci.user_id,
+       'It is the same gym, so of course it looks the same. Check the timestamp — this was shot at 6:02am today, and the water bottle is new.'
+from public.check_ins ci
+where ci.user_id = '5eed0000-0000-4000-a000-000000000003'
+  and ci.pool_id = '900d0001-0000-4000-a000-000000000001'
+  and ci.checkin_date = (now() at time zone 'Asia/Kolkata')::date
+on conflict do nothing;
+
+-- A second flagged check-in with NO dispute yet, so the accused's 24h window
+-- is reachable in the app: log in as priya and the "Explain what happened"
+-- composer is on the 75 Hard Boyz pool screen.
+insert into public.reports (reporter_id, check_in_id, reason, detail)
+select r.reporter, ci.id, r.reason, r.detail
+from public.check_ins ci
+cross join (values
+  ('5eed0000-0000-4000-a000-000000000001'::uuid, 'wrong_person'::public.report_reason,
+   'That is not Priya in the photo.'),
+  ('5eed0000-0000-4000-a000-000000000003'::uuid, 'wrong_person'::public.report_reason, null),
+  ('5eed0000-0000-4000-a000-000000000006'::uuid, 'other'::public.report_reason,
+   'Does not match the rules for this pool.')
+) as r(reporter, reason, detail)
+where ci.user_id = '5eed0000-0000-4000-a000-000000000002'
+  and ci.pool_id = '900d0001-0000-4000-a000-000000000001'
+  and ci.checkin_date = (now() at time zone 'Asia/Kolkata')::date - 1;

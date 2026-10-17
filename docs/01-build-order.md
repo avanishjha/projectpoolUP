@@ -36,7 +36,7 @@ graph TD
 
 ## Build order (serial, one feature at a time)
 
-**Status as of 2026-10-12.** ✅ done · ◑ partial · ⏸ blocked externally · ○ open
+**Status as of 2026-10-17.** ✅ done · ◑ partial · ⏸ blocked externally · ○ open
 
 | # | ✓ | Feature | Depends on | Why this position |
 |---|---|---------|-----------|-------------------|
@@ -54,17 +54,17 @@ graph TD
 | 12 | ◑ | F5.1 Payment foundation | F2.x | Built provider-agnostic against a **simulator** so the rest of F5 was not blocked on credentials. Real Razorpay is a keys + transport swap. |
 | 13 | ⏸ | F5.2–F5.3 Buy-in + mandate | F5.1 | **Blocked on Razorpay credentials.** Simulated buy-in and mandate work end to end today. |
 | 14 | ✅ | F6.1 CRON engine core | F3.x | Built **before** real payments, not after: the simulator meant the engine did not have to wait. Plus F5.4 charger, F5.5 retries, F6.2, F6.7 observability. |
-| 15 | ◑ | F5.5–F5.7 Retry/manual/pre-debit | F6.1 | Retries ✅ and pre-debit notices ✅. **F5.6 manual "Pay Now" is the gap** — a fine with no mandate or exhausted retries currently has no user-facing way to clear it, and clearing it is what lifts delinquency. |
+| 15 | ✅ | F5.5–F5.7 Retry/manual/pre-debit | F6.1 | Retries, manual "Pay Now" and pre-debit notices all done. Clearing a fine lifts delinquency immediately. |
 | 16 | ◑ | F2.6 Pool lifecycle CRONs | F6.1 | Activation (settled-members-only) and auto-complete ✅. 48h pending window and cancellation refunds still open. |
 | 17 | ○ | F5.8–F5.9 Payouts + refunds | F6.1 | Completes the money loop |
-| 18 | ○ | F7.x Wallet | F5.8 | Now has real data to show |
-| 19 | ○ | F8.x Notifications | F6.1 | Reminders/warnings ride the CRON |
+| 18 | ◑ | F7.x Wallet | F5.8 | F7.1/F7.2 done as a **statement, not a balance** — CONQR holds no customer funds (a stored-value wallet is a PPI needing an RBI licence). F7.3 open. |
+| 19 | ◑ | F8.x Notifications | F6.1 | F6.3/F8.1/F8.2 done: queue, quiet hours, daily cap, push tokens, dispatcher. Delivery to a real push service still open. |
 | 20 | ○ | F9.1–F9.3 XP/badges/streak UX | F6.1, F4.x | Dopamine layer |
 | 21 | ○ | F9.4 Power-ups | F9.1, F5.1 | Purchases + CRON consumption |
 | 22 | ○ | F10.1–F10.4 Explore/spectator/share | F4.x | Growth layer |
 | 23 | ○ | F10.5–F10.6 Creators + Pro | F10.1, F5.8 | Revenue layer 2 |
 | 24 | ○ | F9.5 Seasons | F9.1 | Retention loops |
-| 25 | ○ | F11.x Moderation & admin | F6.1 | Trust & ops (admin panel needs real flows to administer) |
+| 25 | ◑ | F11.x Moderation & admin | F6.1 | **F11.3 done** (queue, 24h dispute, 48h review, verdicts, false-reporter suspension, audit log) and the moderation half of F11.4. Anti-cheat F11.1/F11.2, the financial dashboard and abuse limits F11.5 are open. |
 | 26 | ○ | F12.x Hardening/analytics/testing/deploy | all | Continuous, with a dedicated final pass |
 
 Cross-cutting rules applied to every feature: loading/empty/error/success states, skeletons,
